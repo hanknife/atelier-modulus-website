@@ -62,9 +62,9 @@ main {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 60;
   padding: var(--pad-top) var(--pad-x) 0;
-  background: var(--paper);
+  background: transparent;
 }
 
 .nav-top {
@@ -90,6 +90,11 @@ main {
 }
 
 .close-link {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.detail-nav-close {
   color: var(--text);
   text-decoration: none;
 }
@@ -808,7 +813,8 @@ main {
   height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 var(--pad-x) 72px;
+  padding: var(--pad-top) var(--pad-x) 72px;
+  background: var(--paper);
   scrollbar-width: none;
 }
 
@@ -816,32 +822,10 @@ main {
   display: none;
 }
 
-.detail-close-row {
-  height: var(--chrome-top);
-  display: flex;
-  align-items: start;
-  padding-top: var(--pad-top);
-  margin-bottom: 0.5em;
-}
-
-.detail-overlay.overlay-left .detail-close-row {
-  justify-content: flex-start;
-}
-
-.detail-overlay.overlay-right .detail-close-row {
-  justify-content: flex-end;
-}
-
-.detail-close-link {
-  color: var(--red);
-  text-decoration: none;
-  cursor: pointer;
-}
-
 .detail-overlay .detail-title {
   display: grid;
-  gap: 1.15em;
-  margin-bottom: 1.2em;
+  gap: 1.08em;
+  margin-bottom: 1.28em;
 }
 
 .detail-overlay .detail-title h1,
@@ -851,8 +835,8 @@ main {
 }
 
 .detail-overlay .detail-copy {
-  max-width: 62ch;
-  margin-bottom: 1.2em;
+  max-width: 34vw;
+  margin-bottom: 1.25em;
 }
 
 .detail-overlay .detail-copy p {
@@ -869,4 +853,10 @@ main {
   aspect-ratio: 1.33 / 1;
   object-fit: cover;
   filter: saturate(0.72) contrast(0.96);
+}
+
+.detail-overlay.overlay-right .detail-title,
+.detail-overlay.overlay-right .detail-copy {
+  max-width: 36vw;
+  margin-left: clamp(160px, 12vw, 260px);
 }

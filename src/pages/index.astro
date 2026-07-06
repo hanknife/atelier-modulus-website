@@ -28,9 +28,6 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const side = index % 2 === 0 ? "left" : "right";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
-        <div class="detail-close-row">
-          <a href="#" class="detail-close-link" data-detail-close>{side === "right" ? "Close\u2190" : "\u2192Close"}</a>
-        </div>
         <header class="detail-title">
           <h1>{data.title}</h1>
           <p>
@@ -51,24 +48,72 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 </BaseLayout>
 
 <script is:inline>
+const root = document.documentElement;
+const navLeft = document.querySelector(".nav-left");
+const navRight = document.querySelector(".nav-right");
+const navCenter = document.querySelector(".nav-center");
+const brand = document.querySelector(".brand");
+const detailClose = document.createElement("a");
+detailClose.href = "#";
+detailClose.className = "detail-nav-close close-link";
+detailClose.dataset.detailClose = "true";
+
+function closeDetailOverlays() {
+  document.querySelectorAll(".detail-overlay").forEach(function(el) {
+    el.hidden = true;
+  });
+  root.classList.remove("detail-overlay-open", "detail-overlay-left", "detail-overlay-right");
+  if (navLeft) navLeft.hidden = false;
+  if (navRight) navRight.hidden = false;
+  if (brand) brand.textContent = "ATELIER MODULUS";
+  detailClose.remove();
+}
+
+function openDetailOverlay(slug, side) {
+  const target = document.getElementById("detail-overlay-" + slug);
+  if (!target) return;
+
+  document.querySelectorAll(".detail-overlay").forEach(function(el) {
+    el.hidden = el !== target;
+  });
+
+  root.classList.remove("detail-overlay-left", "detail-overlay-right");
+  root.classList.add("detail-overlay-open", "detail-overlay-" + side);
+
+  if (side === "right") {
+    if (navLeft) navLeft.hidden = false;
+    if (navRight) navRight.hidden = true;
+    if (brand) brand.textContent = "ATELIER";
+    detailClose.textContent = "Close←";
+    navCenter?.appendChild(detailClose);
+  } else {
+    if (navLeft) navLeft.hidden = true;
+    if (navRight) navRight.hidden = false;
+    if (brand) brand.textContent = "MODULUS";
+    detailClose.textContent = "→Close";
+    if (brand) {
+      navCenter?.insertBefore(detailClose, brand);
+    } else {
+      navCenter?.appendChild(detailClose);
+    }
+  }
+}
+
 document.addEventListener("click", function(event) {
-  // View button → open overlay
   var viewBtn = event.target.closest(".view-link");
   if (viewBtn) {
     event.preventDefault();
     var slug = viewBtn.dataset.slug;
+    var side = viewBtn.dataset.side || "left";
     if (!slug) return;
-    document.querySelectorAll(".detail-overlay").forEach(function(el) {
-      el.hidden = (el.id !== "detail-overlay-" + slug);
-    });
+    openDetailOverlay(slug, side);
     return;
   }
 
-  // Close link inside overlay → close all detail overlays
   var closeBtn = event.target.closest("[data-detail-close]");
   if (closeBtn) {
     event.preventDefault();
-    document.querySelectorAll(".detail-overlay").forEach(function(el) { el.hidden = true; });
+    closeDetailOverlays();
   }
 });
 </script>
