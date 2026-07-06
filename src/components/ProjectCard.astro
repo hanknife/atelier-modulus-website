@@ -1,0 +1,30 @@
+---
+const { project, side = "left" } = Astro.props;
+const data = project.data;
+const slug = project.id.replace(/\.mdx?$/, "");
+const displayDate = data.display_date ?? String(data.year);
+const carouselImages = [data.cover_image, ...data.gallery];
+const viewHref = `/projects/${slug}/?side=${side}`;
+---
+
+<article class={`project-card project-card-${side}`}>
+  <figure>
+    <button
+      class="project-carousel"
+      type="button"
+      data-images={JSON.stringify(carouselImages)}
+      aria-label={`Browse images for ${data.title}`}
+    >
+      <img src={data.cover_image} alt={`${data.title} image`} loading="lazy" />
+    </button>
+    <figcaption class="project-meta">
+      <strong>{data.title}</strong>
+      <span class="project-facts">
+        {data.location}<br />
+        {data.type}<br />
+        {displayDate}
+        <a class="view-link" href={viewHref}>/View../</a>
+      </span>
+    </figcaption>
+  </figure>
+</article>

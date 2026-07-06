@@ -1,0 +1,34 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const boardImages = [
+  "/images/project-3-1.jpg",
+  "/images/project-3-2.jpg",
+  "/images/project-1-1.jpg",
+  "/images/project-1-2.jpg",
+  "/images/project-2-1.jpg",
+  "/images/cargo-xiaobo-02.png",
+  "/images/project-2-2.jpg",
+  "/images/cargo-xiaobo.png",
+  "/images/project-3-3.jpg"
+];
+---
+
+<BaseLayout
+  title="Coupling / Atelier Modulus"
+  bodyClass="coupling-state"
+  footerLeftLabel="FILTER"
+  footerLeftHref="#filter"
+  footerLeftToggle="filter"
+>
+  <aside class="filter-strip" id="filter" aria-label="Active filters">
+    <a href="/coupling/">Circle-Square-Circle, Among the Trees.</a>
+  </aside>
+  <section class="coupling-board" aria-label="Coupling image board">
+    {boardImages.map((image, index) => (
+      <figure class={`coupling-tile tile-${index + 1}`}>
+        <img src={image} alt="" loading="lazy" />
+      </figure>
+    ))}
+  </section>
+</BaseLayout>

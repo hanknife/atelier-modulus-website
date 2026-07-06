@@ -1,0 +1,24 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const projects = (await getCollection("projects"))
+  .filter((project) =>
+    project.data.tags.some((tag) => ["columns", "research", "visual research"].includes(tag))
+  )
+  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+
+const preview = projects[0]?.data.cover_image;
+---
+
+<BaseLayout title="Lehrgerüste / Atelier Modulus" bodyClass="index-state">
+  <section class="archive-index archive-index-right" aria-label="Lehrgerüste projects">
+    <h1>LEHRGERÜSTE</h1>
+    <nav aria-label="Lehrgerüste links">
+      <a href="/projects/archive-pavilion/">P-△ 000</a>
+      <a href="/projects/archive-pavilion/">Pagoda 000</a>
+      <a href="/projects/archive-pavilion/">The World We Live In 000</a>
+    </nav>
+    {preview && <img class="archive-index-preview" src={preview} alt="" />}
+  </section>
+</BaseLayout>

@@ -1,0 +1,147 @@
+---
+import "../styles/global.css";
+
+const {
+  title = "Atelier Modulus",
+  description = "A quiet architecture studio portfolio built as a static site.",
+  bodyClass = "",
+  footerLeftLabel = "COUPLING",
+  footerLeftHref = "/coupling/",
+  footerLeftToggle = "",
+  closeHref = "",
+  closeText = "→Close",
+  brandLabel = "ATELIER MODULUS"
+} = Astro.props;
+
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body class={bodyClass}>
+    <header class="site-header">
+      <nav class="nav nav-top" aria-label="Primary navigation">
+        <a class="link-blue nav-left" href="/projects/" data-overlay-toggle="projects">PROJECTS</a>
+        <span class="nav-center">
+          {closeHref && <a class="close-link" href={closeHref}>{closeText}</a>}
+          <a class="brand" href="/" aria-label="Atelier Modulus home">{brandLabel}</a>
+        </span>
+        <a class="link-blue nav-right" href="/lehrgerueste/" data-overlay-toggle="lehrgerueste">LEHRGERÜSTE</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <aside class="half-overlay overlay-left project-overlay" id="projects-overlay" aria-label="Projects index" hidden>
+      <nav>
+        <a href="/projects/archive-pavilion/">001 Ruin</a>
+        <a href="/projects/archive-pavilion/">005 The Pillar</a>
+        <a href="/projects/archive-pavilion/">012 Fangyuan Tower</a>
+        <a href="/projects/threshold-school/">018 Fangyuan Pavilion</a>
+        <a href="/projects/threshold-school/">022 Black Room</a>
+        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal I</a>
+        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal II</a>
+        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal III</a>
+        <a href="/projects/archive-pavilion/">030 Nauitlus</a>
+        <a href="/projects/courtyard-house/">032 Xiaobo Pavilion</a>
+      </nav>
+    </aside>
+    <aside class="half-overlay overlay-right lehr-overlay" id="lehrgerueste-overlay" aria-label="Lehrgerüste index" hidden>
+      <nav>
+        <a href="/projects/archive-pavilion/?side=right">P-△ 000</a>
+        <a href="/projects/archive-pavilion/?side=right">Pagoda 000</a>
+        <a href="/projects/archive-pavilion/?side=right">The World We Live In 000</a>
+      </nav>
+    </aside>
+    <aside class="half-overlay overlay-right info-overlay" id="info-overlay" aria-label="Info" hidden>
+      <div class="black-label info-address">
+        Atelier Modulus GmbH<br /><br />
+        Lehenmattstrasse 200, 4052 Basel,<br />
+        Switzerland<br /><br />
+        info@ateliermodulus.com<br /><br />
+        Instagram:<br />
+        @Atelier Modulus/模象工作室
+      </div>
+      <div class="black-label info-bio">
+        Zijian Han(*1989) studied architecture at ETH Zurich (2016-2020), following a
+        bachelor’s degree in architecture at the University of Kassel (2012-2016)
+        and a bachelor’s degree in civil engineering at Tongji University in
+        Shanghai (2007-2012). He worked as an intern at AHM Architects BDA in Berlin
+        (2014-2015), and later as a structural draftsman at Schnetzer Puskas
+        Ingenieure AG in Switzerland (2021-2025). Since 2022, he has been working
+        as a lead architect at Atelier Modulus.
+      </div>
+      <span class="black-label info-chip chip-exhibitions">Exhibitions</span>
+      <div class="black-label info-note">
+        Selected for the <em>FutureLab</em> exhibition of Chinese emerging graduates
+        in China and abroad,<br />West Bund Art Center, Shanghai,<br />2024
+      </div>
+      <span class="black-label info-chip chip-lectures">Lectures</span>
+      <div class="black-label info-caption">
+        <em>From Object-Oriented Ontology to Self-Other Symmetry</em>
+        &nbsp;&nbsp;&nbsp;&nbsp; 模象不看相
+      </div>
+    </aside>
+    <footer class="site-footer">
+      <a
+        class="link-green"
+        href={footerLeftHref}
+        data-filter-toggle={footerLeftToggle || undefined}
+      >
+        {footerLeftLabel}
+      </a>
+      <a href="/info/" data-overlay-toggle="info">INFO</a>
+    </footer>
+    <script is:inline>
+      const overlays = {
+        projects: document.getElementById("projects-overlay"),
+        lehrgerueste: document.getElementById("lehrgerueste-overlay"),
+        info: document.getElementById("info-overlay")
+      };
+
+      const closeOverlaySide = (side) => {
+        Object.values(overlays).forEach((overlay) => {
+          if (!overlay) return;
+          if (overlay.classList.contains(`overlay-${side}`)) overlay.hidden = true;
+        });
+      };
+
+      document.addEventListener("click", (event) => {
+        const toggle = event.target.closest("[data-overlay-toggle]");
+        if (!toggle) return;
+        const key = toggle.dataset.overlayToggle;
+        const overlay = overlays[key];
+        if (!overlay) return;
+        event.preventDefault();
+        const side = overlay.classList.contains("overlay-left") ? "left" : "right";
+        const shouldOpen = overlay.hidden;
+        closeOverlaySide(side);
+        overlay.hidden = !shouldOpen;
+      });
+
+      document.addEventListener("click", (event) => {
+        const toggle = event.target.closest("[data-filter-toggle]");
+        if (!toggle) return;
+        event.preventDefault();
+        document.documentElement.classList.toggle("filter-open");
+      });
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest(".project-carousel");
+        if (!button) return;
+        const img = button.querySelector("img");
+        if (!img) return;
+        const images = JSON.parse(button.dataset.images || "[]");
+        if (images.length < 2) return;
+        const nextIndex = (Number(button.dataset.index || "0") + 1) % images.length;
+        button.dataset.index = String(nextIndex);
+        img.src = images[nextIndex];
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+
+const cargoIndex = [
+  { label: "001 Ruin", href: "/projects/archive-pavilion/" },
+  { label: "005 The Pillar", href: "/projects/archive-pavilion/" },
+  { label: "012 Fangyuan Tower", href: "/projects/archive-pavilion/" },
+  { label: "018 Fangyuan Pavilion", href: "/projects/threshold-school/" },
+  { label: "022 Black Room", href: "/projects/threshold-school/" },
+  { label: "024 Computing Hut-Radical Normal I", href: "/projects/threshold-school/" },
+  { label: "024 Computing Hut-Radical Normal II", href: "/projects/threshold-school/" },
+  { label: "024 Computing Hut-Radical Normal III", href: "/projects/threshold-school/" },
+  { label: "030 Nauitlus", href: "/projects/archive-pavilion/" },
+  { label: "032 Xiaobo Pavilion", href: "/projects/courtyard-house/" }
+];
+
+const preview = projects[0]?.data.cover_image;
+---
+
+<BaseLayout title="Projects / Atelier Modulus" bodyClass="index-state">
+  <section class="archive-index archive-index-left" aria-label="Project archive">
+    <h1>PROJECTS</h1>
+    <nav aria-label="Project links">
+      {cargoIndex.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+    {preview && <img class="archive-index-preview" src={preview} alt="" />}
+  </section>
+</BaseLayout>

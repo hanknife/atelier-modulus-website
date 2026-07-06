@@ -1,0 +1,71 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProjectCard from "../../components/ProjectCard.astro";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return projects.map((project) => ({
+    params: { slug: project.id.replace(/\.mdx?$/, "") },
+    props: { project }
+  }));
+}
+
+const { project } = Astro.props;
+const data = project.data;
+const { Content } = await render(project);
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+const currentIndex = projects.findIndex((item) => item.id === project.id);
+const pairedIndex = currentIndex % 2 === 0 ? currentIndex + 1 : currentIndex - 1;
+const paired = projects[pairedIndex] ?? projects.find((item) => item.id !== project.id) ?? project;
+const detailImages = [data.cover_image, ...data.gallery];
+const displayDate = data.display_date ?? String(data.year);
+const pairedSide = currentIndex % 2 === 0 ? "right" : "left";
+---
+
+<BaseLayout
+  title={`${data.title} / Atelier Modulus`}
+  description={data.description_en}
+  bodyClass="detail-state"
+  closeHref="/"
+  closeText="→Close"
+  brandLabel="MODULUS"
+>
+  <article class="detail-split">
+    <section class="detail-main" aria-label={`${data.title} details`}>
+      <header class="detail-title">
+        <h1>{data.title}</h1>
+        <p>
+          {data.location}<br />
+          {data.type}<br />
+          {displayDate}
+        </p>
+      </header>
+      <div class="detail-copy">
+        <p>{data.description_en}</p>
+        <Content />
+      </div>
+      <div class="detail-gallery" aria-label={`${data.title} gallery`}>
+        {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
+      </div>
+    </section>
+
+    <aside class="detail-related" aria-label="Opposite project column">
+      <ProjectCard project={paired} side={pairedSide} />
+    </aside>
+  </article>
+  <script is:inline>
+    const params = new URLSearchParams(window.location.search);
+    const side = params.get("side") === "right" ? "right" : "left";
+    document.documentElement.classList.toggle("detail-side-right", side === "right");
+    const closeLink = document.querySelector(".close-link");
+    const navCenter = document.querySelector(".nav-center");
+    const brand = document.querySelector(".brand");
+    if (closeLink && navCenter && brand && side === "right") {
+      closeLink.textContent = "Close←";
+      brand.textContent = "ATELIER";
+      navCenter.insertBefore(brand, closeLink);
+    }
+  </script>
+</BaseLayout>

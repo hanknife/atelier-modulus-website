@@ -1,0 +1,22 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ProjectCard from "../components/ProjectCard.astro";
+
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+
+const leftProjects = projects.filter((_, index) => index % 2 === 0);
+const rightProjects = projects.filter((_, index) => index % 2 === 1);
+---
+
+<BaseLayout>
+  <section class="project-split home-index" aria-label="Project index">
+    <div class="project-column" aria-label="Left project column">
+      {leftProjects.map((project) => <ProjectCard project={project} side="left" />)}
+    </div>
+    <div class="project-column" aria-label="Right project column">
+      {rightProjects.map((project) => <ProjectCard project={project} side="right" />)}
+    </div>
+  </section>
+</BaseLayout>
