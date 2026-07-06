@@ -7,7 +7,7 @@ const allProjects = (await getCollection("projects"))
 const projectsList = allProjects.filter((p) => p.data.category === "projects");
 const lehrList = allProjects.filter((p) => p.data.category === "lehrgerueste");
 
-const formatTitle = (title) => title.replace(/^\d+_/, "");
+const formatTitle = (title: string) => title.replace(/^\d+_/, "");
 
 const {
   title = "Atelier Modulus",
