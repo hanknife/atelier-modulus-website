@@ -10,7 +10,10 @@ const leftProjects = projects.filter((_, index) => index % 2 === 0);
 const rightProjects = projects.filter((_, index) => index % 2 === 1);
 ---
 
-<BaseLayout>
+<BaseLayout
+  closeHref="#"
+  closeText="→Close"
+>
   <section class="project-split home-index" aria-label="Project index">
     <div class="project-column" aria-label="Left project column">
       {leftProjects.map((project) => <ProjectCard project={project} side="left" />)}
@@ -27,23 +30,20 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const displayDate = data.display_date ?? String(data.year);
     const side = index % 2 === 0 ? "left" : "right";
     return (
-      <aside class={`half-overlay overlay-${side} project-detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
-        <button class="overlay-close" type="button" aria-label="Close overlay">✕</button>
-        <div class="detail-main">
-          <header class="detail-title">
-            <h1>{data.title}</h1>
-            <p>
-              {data.location}<br />
-              {data.type}<br />
-              {displayDate}
-            </p>
-          </header>
-          <div class="detail-gallery">
-            {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
-          </div>
-          <div class="detail-copy">
-            <p>{data.description_en}</p>
-          </div>
+      <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
+        <header class="detail-title">
+          <h1>{data.title}</h1>
+          <p>
+            {data.location}<br />
+            {data.type}<br />
+            {displayDate}
+          </p>
+        </header>
+        <div class="detail-copy">
+          <p>{data.description_en}</p>
+        </div>
+        <div class="detail-gallery" aria-label={`${data.title} gallery`}>
+          {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
         </div>
       </aside>
     );
@@ -51,21 +51,59 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 </BaseLayout>
 
 <script is:inline>
-  document.addEventListener("click", (event) => {
-    const viewBtn = event.target.closest(".view-link");
+  document.addEventListener("click", function(event) {
+    var viewBtn = event.target.closest(".view-link");
     if (viewBtn) {
       event.preventDefault();
-      const slug = viewBtn.dataset.slug;
+      var slug = viewBtn.dataset.slug;
       if (!slug) return;
-      document.querySelectorAll(".project-detail-overlay").forEach((el) => {
-        el.hidden = el.id === `detail-overlay-${slug}` ? false : true;
+
+      // Find which side this project is on
+      var card = viewBtn.closest(".project-card");
+      var side = card && card.classList.contains("project-card-right") ? "right" : "left";
+
+      // Hide all overlays, show target
+      document.querySelectorAll(".detail-overlay").forEach(function(el) {
+        el.hidden = el.id === "detail-overlay-" + slug ? false : true;
       });
+
+      // Modify top nav
+      document.documentElement.classList.add("detail-state", "overlay-open");
+      if (side === "right") {
+        document.documentElement.classList.add("detail-side-right");
+      } else {
+        document.documentElement.classList.remove("detail-side-right");
+      }
+
+      var closeLink = document.querySelector(".close-link");
+      var navCenter = document.querySelector(".nav-center");
+      var brand = document.querySelector(".brand");
+
+      if (closeLink && navCenter && brand) {
+        closeLink.hidden = false;
+        brand.hidden = false;
+        if (side === "right") {
+          closeLink.textContent = "Close←";
+          brand.textContent = "ATELIER";
+          navCenter.insertBefore(brand, closeLink);
+        } else {
+          closeLink.textContent = "→Close";
+          brand.textContent = "MODULUS";
+          navCenter.appendChild(brand);
+          navCenter.appendChild(closeLink);
+        }
+      }
+
       return;
     }
-    const closeBtn = event.target.closest(".overlay-close");
-    if (closeBtn) {
-      const overlay = closeBtn.closest(".project-detail-overlay");
-      if (overlay) overlay.hidden = true;
+
+    var closeLink = event.target.closest(".close-link");
+    if (closeLink) {
+      event.preventDefault();
+      document.querySelectorAll(".detail-overlay").forEach(function(el) { el.hidden = true; });
+      document.documentElement.classList.remove("detail-state", "overlay-open", "detail-side-right");
+      var navBrand = document.querySelector(".brand");
+      if (navBrand) { navBrand.textContent = "MODULUS"; }
     }
   });
 </script>
