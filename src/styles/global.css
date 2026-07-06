@@ -872,3 +872,37 @@ main {
   max-width: 36vw;
   margin-left: clamp(160px, 12vw, 260px);
 }
+
+/* === Detail overlay slide-in / slide-out animation (CSS only, no JS changes) === */
+/* Override [hidden] display:none so transform transitions can run.        */
+/* Hidden overlays are position:fixed + visibility:hidden + pointer-events */
+/* none, so they are invisible and non-interactive but still rendered for  */
+/* transition purposes.                                                     */
+.detail-overlay {
+  transform: translateX(0);
+  transition: transform 0.4s ease-out, visibility 0s linear 0s;
+}
+
+.detail-overlay[hidden] {
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition: transform 0.4s ease-in, visibility 0s linear 0.4s;
+}
+
+.detail-overlay.overlay-right[hidden] {
+  transform: translateX(100%);
+}
+
+/* Close link fades in slightly after the overlay starts sliding in. */
+/* The element is re-appended to <body> on each open, so the animation */
+/* restarts every time.                                                */
+.detail-nav-close {
+  animation: detailCloseIn 0.3s ease 0.12s both;
+}
+
+@keyframes detailCloseIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
