@@ -815,11 +815,10 @@ main {
 }
 
 .detail-close-btn {
-  display: block;
+  display: inline-block;
   background: none;
   border: none;
   font: inherit;
-  font-size: clamp(18px, 1.3vw, 24px);
   cursor: pointer;
   color: var(--text);
   padding: 0;

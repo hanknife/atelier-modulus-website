@@ -28,7 +28,7 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const side = index % 2 === 0 ? "left" : "right";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
-        <button class={`detail-close-btn ${side}`} type="button">✕</button>
+        <button class={`detail-close-btn ${side}`} type="button">{side === "right" ? "Close←" : "→Close"}</button>
         <header class="detail-title">
           <h1>{data.title}</h1>
           <p>
