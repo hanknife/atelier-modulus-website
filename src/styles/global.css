@@ -808,12 +808,34 @@ main {
   height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: calc(var(--chrome-top) + var(--pad-top)) var(--pad-x) 72px;
+  padding: 0 var(--pad-x) 72px;
   scrollbar-width: none;
 }
 
 .detail-overlay::-webkit-scrollbar {
   display: none;
+}
+
+.detail-close-row {
+  height: var(--chrome-top);
+  display: flex;
+  align-items: start;
+  padding-top: var(--pad-top);
+  margin-bottom: 0.5em;
+}
+
+.detail-overlay.overlay-left .detail-close-row {
+  justify-content: flex-start;
+}
+
+.detail-overlay.overlay-right .detail-close-row {
+  justify-content: flex-end;
+}
+
+.detail-close-link {
+  color: var(--red);
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .detail-overlay .detail-title {
