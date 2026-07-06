@@ -15,7 +15,7 @@ const {
 } = Astro.props;
 
 const allProjects = (await getCollection("projects"))
-  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+  .sort((a, b) => a.data.order - b.data.order);
 
 const projectList = allProjects.filter((p) => p.data.category === "projects");
 const lehrgeruesteList = allProjects.filter((p) => p.data.category === "lehrgerueste");

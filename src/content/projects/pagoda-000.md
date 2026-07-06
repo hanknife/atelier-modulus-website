@@ -1,6 +1,6 @@
 ---
-title: "Pagoda 000"
-list_title: "Pagoda 000"
+title: "000_Pagoda"
+list_title: "000_Pagoda"
 year: 2025
 location: "Various Locations"
 type: "Research-Oriented Design"

@@ -1,6 +1,6 @@
 ---
-title: "030_Nauitlus"
-list_title: "030 Nauitlus"
+title: "030_Nautilus"
+list_title: "030 Nautilus"
 year: 2024
 location: "TBD"
 type: "TBD"

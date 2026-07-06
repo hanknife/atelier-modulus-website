@@ -1,6 +1,6 @@
 ---
 title: "000_P-∆"
-list_title: "P-∆ 000"
+list_title: "000_P-∆"
 year: 2026
 location: "Various Locations"
 type: "Visual Research on Columns"

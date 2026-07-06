@@ -4,7 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProjectCard from "../components/ProjectCard.astro";
 
 const projects = (await getCollection("projects"))
-  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+  .sort((a, b) => a.data.order - b.data.order);
 
 const leftProjects = projects.filter((p) => p.data.category === "projects");
 const rightProjects = projects.filter((p) => p.data.category === "lehrgerueste");
