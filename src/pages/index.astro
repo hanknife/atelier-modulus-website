@@ -10,10 +10,7 @@ const leftProjects = projects.filter((_, index) => index % 2 === 0);
 const rightProjects = projects.filter((_, index) => index % 2 === 1);
 ---
 
-<BaseLayout
-  closeHref="#"
-  closeText="→Close"
->
+<BaseLayout>
   <section class="project-split home-index" aria-label="Project index">
     <div class="project-column" aria-label="Left project column">
       {leftProjects.map((project) => <ProjectCard project={project} side="left" />)}
@@ -51,54 +48,67 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 </BaseLayout>
 
 <script is:inline>
+(function() {
+  var navCenter, brand;
+
+  function ensureCloseLink(side) {
+    if (!navCenter) navCenter = document.querySelector(".nav-center");
+    if (!brand) brand = document.querySelector(".brand");
+    if (!navCenter || !brand) return;
+
+    // Remove any existing dynamic close link first
+    removeCloseLink();
+
+    var closeEl = document.createElement("a");
+    closeEl.className = "close-link detail-close";
+    closeEl.href = "#";
+
+    if (side === "right") {
+      closeEl.textContent = "Close←";
+      navCenter.appendChild(closeEl);
+    } else {
+      closeEl.textContent = "+Close";
+      navCenter.insertBefore(closeEl, brand);
+    }
+  }
+
+  function removeCloseLink() {
+    var existing = document.querySelector(".detail-close");
+    if (existing) existing.remove();
+  }
+
   document.addEventListener("click", function(event) {
+    // View button clicked → open overlay
     var viewBtn = event.target.closest(".view-link");
     if (viewBtn) {
       event.preventDefault();
       var slug = viewBtn.dataset.slug;
       if (!slug) return;
 
-      // Find which side this project is on
+      // Determine which side this card is on
       var card = viewBtn.closest(".project-card");
-      var side = card && card.classList.contains("project-card-right") ? "right" : "left";
+      var side = (card && card.classList.contains("project-card-right")) ? "right" : "left";
 
       // Hide all overlays, show target
       document.querySelectorAll(".detail-overlay").forEach(function(el) {
-        el.hidden = el.id === "detail-overlay-" + slug ? false : true;
+        el.hidden = (el.id !== "detail-overlay-" + slug);
       });
 
-      // Show header and insert Close link — never change brand text
-      document.documentElement.classList.add("overlay-open");
-      if (side === "right") {
-        document.documentElement.classList.add("detail-side-right");
-      } else {
-        document.documentElement.classList.remove("detail-side-right");
-      }
-
-      var closeLink = document.querySelector(".close-link");
-      var navCenter = document.querySelector(".nav-center");
-      var brand = document.querySelector(".brand");
-
-      if (closeLink && navCenter && brand) {
-        closeLink.hidden = false;
-        if (side === "right") {
-          closeLink.textContent = "Close←";
-          navCenter.insertBefore(closeLink, null);
-        } else {
-          closeLink.textContent = "+Close";
-          navCenter.insertBefore(closeLink, brand);
-        }
-      }
+      // Show close link in nav (brand text stays untouched)
+      ensureCloseLink(side);
 
       return;
     }
 
-    var closeLink = event.target.closest(".close-link");
-    if (closeLink) {
+    // Close button clicked → hide overlay
+    var closeBtn = event.target.closest(".detail-close");
+    if (closeBtn) {
       event.preventDefault();
-      document.querySelectorAll(".detail-overlay").forEach(function(el) { el.hidden = true; });
-      document.documentElement.classList.remove("overlay-open", "detail-side-right");
-      closeLink.hidden = true;
+      document.querySelectorAll(".detail-overlay").forEach(function(el) {
+        el.hidden = true;
+      });
+      removeCloseLink();
     }
   });
+})();
 </script>

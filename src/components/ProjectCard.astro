@@ -6,7 +6,7 @@ const displayDate = data.display_date ?? String(data.year);
 const carouselImages = [data.cover_image, ...data.gallery];
 ---
 
-<article class={`project-card project-card-${side}`} data-slug={slug}>
+<article class={`project-card project-card-${side}`}>
   <figure>
     <button
       class="project-carousel"
