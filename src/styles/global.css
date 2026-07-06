@@ -803,10 +803,12 @@ main {
 
 /* === Index page: in-column project detail overlays === */
 .detail-overlay {
+  top: 0;
+  z-index: 40;
+  height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 16px 20px 72px;
-  height: calc(100vh - var(--chrome-top));
+  padding: var(--chrome-top) 20px 72px;
   scrollbar-width: none;
 }
 
@@ -815,6 +817,8 @@ main {
 }
 
 .detail-close-btn {
+  position: fixed;
+  top: var(--chrome-top);
   display: inline-block;
   background: none;
   border: none;
@@ -822,14 +826,16 @@ main {
   cursor: pointer;
   color: var(--text);
   padding: 0;
-  margin-bottom: 0.5em;
+  z-index: 41;
 }
 
-.detail-close-btn.left {
+.detail-overlay.overlay-left .detail-close-btn {
+  left: var(--pad-x);
   text-align: left;
 }
 
-.detail-close-btn.right {
+.detail-overlay.overlay-right .detail-close-btn {
+  right: var(--pad-x);
   text-align: right;
 }
 
