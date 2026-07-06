@@ -67,8 +67,8 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
         el.hidden = el.id === "detail-overlay-" + slug ? false : true;
       });
 
-      // Modify top nav
-      document.documentElement.classList.add("detail-state", "overlay-open");
+      // Show header and insert Close link — never change brand text
+      document.documentElement.classList.add("overlay-open");
       if (side === "right") {
         document.documentElement.classList.add("detail-side-right");
       } else {
@@ -81,16 +81,12 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 
       if (closeLink && navCenter && brand) {
         closeLink.hidden = false;
-        brand.hidden = false;
         if (side === "right") {
           closeLink.textContent = "Close←";
-          brand.textContent = "ATELIER";
-          navCenter.insertBefore(brand, closeLink);
+          navCenter.insertBefore(closeLink, null);
         } else {
-          closeLink.textContent = "→Close";
-          brand.textContent = "MODULUS";
-          navCenter.appendChild(brand);
-          navCenter.appendChild(closeLink);
+          closeLink.textContent = "+Close";
+          navCenter.insertBefore(closeLink, brand);
         }
       }
 
@@ -101,9 +97,8 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     if (closeLink) {
       event.preventDefault();
       document.querySelectorAll(".detail-overlay").forEach(function(el) { el.hidden = true; });
-      document.documentElement.classList.remove("detail-state", "overlay-open", "detail-side-right");
-      var navBrand = document.querySelector(".brand");
-      if (navBrand) { navBrand.textContent = "MODULUS"; }
+      document.documentElement.classList.remove("overlay-open", "detail-side-right");
+      closeLink.hidden = true;
     }
   });
 </script>

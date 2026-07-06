@@ -193,10 +193,17 @@ main {
   display: flex;
 }
 
+.home-index .close-link {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .overlay-open .close-link {
   color: var(--text);
   text-decoration: none;
   cursor: pointer;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .detail-overlay .detail-title {
