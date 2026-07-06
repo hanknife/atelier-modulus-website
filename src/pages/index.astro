@@ -28,7 +28,6 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const side = index % 2 === 0 ? "left" : "right";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
-        <button class={`detail-close-btn ${side}`} type="button">{side === "right" ? "Close←" : "→Close"}</button>
         <header class="detail-title">
           <h1>{data.title}</h1>
           <p>
@@ -56,17 +55,60 @@ document.addEventListener("click", function(event) {
     event.preventDefault();
     var slug = viewBtn.dataset.slug;
     if (!slug) return;
+
+    // Find which side this project is on
+    var card = viewBtn.closest(".project-card");
+    var side = card && card.classList.contains("project-card-right") ? "right" : "left";
+
+    // Hide all overlays, show target
     document.querySelectorAll(".detail-overlay").forEach(function(el) {
       el.hidden = (el.id !== "detail-overlay-" + slug);
     });
+
+    // Update nav bar: inject close-link + adjust brand text
+    var navCenter = document.querySelector(".nav-center");
+    var brand = document.querySelector(".brand");
+    if (navCenter && brand) {
+      // Save original state on first open (idempotent)
+      if (!navCenter.dataset._origBrand) {
+        navCenter.dataset._origBrand = brand.textContent;
+      }
+
+      // Remove existing close-link if any
+      var existing = navCenter.querySelector(".close-link-detail");
+      if (existing) existing.remove();
+
+      // Create close link
+      var closeLink = document.createElement("a");
+      closeLink.className = "close-link close-link-detail";
+      closeLink.href = "#";
+      closeLink.textContent = side === "right" ? "Close\u2190" : "\u2192Close";
+
+      if (side === "right") {
+        brand.textContent = "ATELIER";
+        navCenter.appendChild(closeLink);
+      } else {
+        brand.textContent = "MODULUS";
+        navCenter.insertBefore(closeLink, brand);
+      }
+    }
     return;
   }
 
-  // ✕ button inside overlay → close it
-  var closeBtn = event.target.closest(".detail-close-btn");
-  if (closeBtn) {
-    var overlay = closeBtn.closest(".detail-overlay");
-    if (overlay) overlay.hidden = true;
+  // Close link in nav → close overlay, restore nav
+  var closeLink = event.target.closest(".close-link-detail");
+  if (closeLink) {
+    event.preventDefault();
+    document.querySelectorAll(".detail-overlay").forEach(function(el) { el.hidden = true; });
+    var navCenter = document.querySelector(".nav-center");
+    var brand = document.querySelector(".brand");
+    if (navCenter && brand) {
+      var cl = navCenter.querySelector(".close-link-detail");
+      if (cl) cl.remove();
+      if (navCenter.dataset._origBrand) {
+        brand.textContent = navCenter.dataset._origBrand;
+      }
+    }
   }
 });
 </script>

@@ -808,35 +808,12 @@ main {
   height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--chrome-top) 20px 72px;
+  padding: calc(var(--chrome-top) + var(--pad-top)) var(--pad-x) 72px;
   scrollbar-width: none;
 }
 
 .detail-overlay::-webkit-scrollbar {
   display: none;
-}
-
-.detail-close-btn {
-  position: fixed;
-  top: var(--chrome-top);
-  display: inline-block;
-  background: none;
-  border: none;
-  font: inherit;
-  cursor: pointer;
-  color: var(--text);
-  padding: 0;
-  z-index: 41;
-}
-
-.detail-overlay.overlay-left .detail-close-btn {
-  left: var(--pad-x);
-  text-align: left;
-}
-
-.detail-overlay.overlay-right .detail-close-btn {
-  right: var(--pad-x);
-  text-align: right;
 }
 
 .detail-overlay .detail-title {
