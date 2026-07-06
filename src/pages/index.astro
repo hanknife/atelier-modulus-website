@@ -28,6 +28,7 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const side = index % 2 === 0 ? "left" : "right";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
+        <a href="#" class={`detail-nav-close detail-nav-close-${side} close-link`} data-detail-close="true">{side === "right" ? "Close←" : "→Close"}</a>
         <header class="detail-title">
           <h1>{data.title}</h1>
           <p>
@@ -49,17 +50,12 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 
 <script is:inline>
 const root = document.documentElement;
-const detailClose = document.createElement("a");
-detailClose.href = "#";
-detailClose.className = "detail-nav-close close-link";
-detailClose.dataset.detailClose = "true";
 
 function closeDetailOverlays() {
   document.querySelectorAll(".detail-overlay").forEach(function(el) {
     el.hidden = true;
   });
   root.classList.remove("detail-overlay-open", "detail-overlay-left", "detail-overlay-right");
-  detailClose.remove();
 }
 
 function openDetailOverlay(slug, side) {
@@ -72,10 +68,6 @@ function openDetailOverlay(slug, side) {
 
   root.classList.remove("detail-overlay-left", "detail-overlay-right");
   root.classList.add("detail-overlay-open", "detail-overlay-" + side);
-  detailClose.textContent = side === "right" ? "Close←" : "→Close";
-  detailClose.classList.toggle("detail-nav-close-right", side === "right");
-  detailClose.classList.toggle("detail-nav-close-left", side !== "right");
-  document.body.appendChild(detailClose);
 }
 
 document.addEventListener("click", function(event) {

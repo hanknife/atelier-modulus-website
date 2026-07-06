@@ -97,17 +97,17 @@ main {
 .detail-nav-close {
   color: var(--text);
   text-decoration: none;
-  position: fixed;
+  position: absolute;
   top: var(--pad-top);
   z-index: 80;
 }
 
 .detail-nav-close-left {
-  right: calc(50vw + var(--gap-x) / 2 + 0.35em);
+  right: calc(var(--gap-x) / 2 + 0.35em);
 }
 
 .detail-nav-close-right {
-  left: calc(50vw + var(--gap-x) / 2 + 0.35em);
+  left: calc(var(--gap-x) / 2 + 0.35em);
 }
 
 .nav-left {
@@ -893,16 +893,4 @@ main {
 
 .detail-overlay.overlay-right[hidden] {
   transform: translateX(100%);
-}
-
-/* Close link fades in slightly after the overlay starts sliding in. */
-/* The element is re-appended to <body> on each open, so the animation */
-/* restarts every time.                                                */
-.detail-nav-close {
-  animation: detailCloseIn 0.3s ease 0.12s both;
-}
-
-@keyframes detailCloseIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
