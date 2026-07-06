@@ -19,4 +19,53 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
       {rightProjects.map((project) => <ProjectCard project={project} side="right" />)}
     </div>
   </section>
+
+  {projects.map((project, index) => {
+    const data = project.data;
+    const slug = project.id.replace(/\.mdx?$/, "");
+    const detailImages = [data.cover_image, ...data.gallery];
+    const displayDate = data.display_date ?? String(data.year);
+    const side = index % 2 === 0 ? "left" : "right";
+    return (
+      <aside class={`half-overlay overlay-${side} project-detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
+        <button class="overlay-close" type="button" aria-label="Close overlay">✕</button>
+        <div class="detail-main">
+          <header class="detail-title">
+            <h1>{data.title}</h1>
+            <p>
+              {data.location}<br />
+              {data.type}<br />
+              {displayDate}
+            </p>
+          </header>
+          <div class="detail-gallery">
+            {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
+          </div>
+          <div class="detail-copy">
+            <p>{data.description_en}</p>
+          </div>
+        </div>
+      </aside>
+    );
+  })}
 </BaseLayout>
+
+<script is:inline>
+  document.addEventListener("click", (event) => {
+    const viewBtn = event.target.closest(".view-link");
+    if (viewBtn) {
+      event.preventDefault();
+      const slug = viewBtn.dataset.slug;
+      if (!slug) return;
+      document.querySelectorAll(".project-detail-overlay").forEach((el) => {
+        el.hidden = el.id === `detail-overlay-${slug}` ? false : true;
+      });
+      return;
+    }
+    const closeBtn = event.target.closest(".overlay-close");
+    if (closeBtn) {
+      const overlay = closeBtn.closest(".project-detail-overlay");
+      if (overlay) overlay.hidden = true;
+    }
+  });
+</script>

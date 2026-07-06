@@ -4,10 +4,9 @@ const data = project.data;
 const slug = project.id.replace(/\.mdx?$/, "");
 const displayDate = data.display_date ?? String(data.year);
 const carouselImages = [data.cover_image, ...data.gallery];
-const viewHref = `/projects/${slug}/?side=${side}`;
 ---
 
-<article class={`project-card project-card-${side}`}>
+<article class={`project-card project-card-${side}`} data-slug={slug}>
   <figure>
     <button
       class="project-carousel"
@@ -23,7 +22,7 @@ const viewHref = `/projects/${slug}/?side=${side}`;
         {data.location}<br />
         {data.type}<br />
         {displayDate}
-        <a class="view-link" href={viewHref}>/View../</a>
+        <button class="view-link" data-slug={slug} type="button">/View../</button>
       </span>
     </figcaption>
   </figure>
