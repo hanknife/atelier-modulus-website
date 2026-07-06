@@ -49,10 +49,6 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 
 <script is:inline>
 const root = document.documentElement;
-const navLeft = document.querySelector(".nav-left");
-const navRight = document.querySelector(".nav-right");
-const navCenter = document.querySelector(".nav-center");
-const brand = document.querySelector(".brand");
 const detailClose = document.createElement("a");
 detailClose.href = "#";
 detailClose.className = "detail-nav-close close-link";
@@ -63,9 +59,6 @@ function closeDetailOverlays() {
     el.hidden = true;
   });
   root.classList.remove("detail-overlay-open", "detail-overlay-left", "detail-overlay-right");
-  if (navLeft) navLeft.hidden = false;
-  if (navRight) navRight.hidden = false;
-  if (brand) brand.textContent = "ATELIER MODULUS";
   detailClose.remove();
 }
 
@@ -79,24 +72,10 @@ function openDetailOverlay(slug, side) {
 
   root.classList.remove("detail-overlay-left", "detail-overlay-right");
   root.classList.add("detail-overlay-open", "detail-overlay-" + side);
-
-  if (side === "right") {
-    if (navLeft) navLeft.hidden = false;
-    if (navRight) navRight.hidden = true;
-    if (brand) brand.textContent = "ATELIER";
-    detailClose.textContent = "Close←";
-    navCenter?.appendChild(detailClose);
-  } else {
-    if (navLeft) navLeft.hidden = true;
-    if (navRight) navRight.hidden = false;
-    if (brand) brand.textContent = "MODULUS";
-    detailClose.textContent = "→Close";
-    if (brand) {
-      navCenter?.insertBefore(detailClose, brand);
-    } else {
-      navCenter?.appendChild(detailClose);
-    }
-  }
+  detailClose.textContent = side === "right" ? "Close←" : "→Close";
+  detailClose.classList.toggle("detail-nav-close-right", side === "right");
+  detailClose.classList.toggle("detail-nav-close-left", side !== "right");
+  document.body.appendChild(detailClose);
 }
 
 document.addEventListener("click", function(event) {

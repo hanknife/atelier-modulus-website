@@ -97,6 +97,17 @@ main {
 .detail-nav-close {
   color: var(--text);
   text-decoration: none;
+  position: fixed;
+  top: var(--pad-top);
+  z-index: 80;
+}
+
+.detail-nav-close-left {
+  right: calc(50vw + var(--gap-x) / 2 + 0.35em);
+}
+
+.detail-nav-close-right {
+  left: calc(50vw + var(--gap-x) / 2 + 0.35em);
 }
 
 .nav-left {
@@ -809,7 +820,8 @@ main {
 /* === Index page: in-column project detail overlays === */
 .detail-overlay {
   top: 0;
-  z-index: 40;
+  z-index: 70;
+  width: 50vw;
   height: 100vh;
   overflow-y: auto;
   overscroll-behavior: contain;
