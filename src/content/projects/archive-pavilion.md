@@ -1,5 +1,5 @@
 ---
-title: "000_P-△"
+title: "000_P-∆"
 year: 2026
 location: "Various Locations"
 type: "Visual Research on Columns"
