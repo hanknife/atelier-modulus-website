@@ -805,13 +805,33 @@ main {
 .detail-overlay {
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 16px 0 72px;
+  padding: 16px 20px 72px;
   height: calc(100vh - var(--chrome-top));
   scrollbar-width: none;
 }
 
 .detail-overlay::-webkit-scrollbar {
   display: none;
+}
+
+.detail-close-btn {
+  display: block;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: clamp(18px, 1.3vw, 24px);
+  cursor: pointer;
+  color: var(--text);
+  padding: 0;
+  margin-bottom: 0.5em;
+}
+
+.detail-close-btn.left {
+  text-align: left;
+}
+
+.detail-close-btn.right {
+  text-align: right;
 }
 
 .detail-overlay .detail-title {

@@ -28,6 +28,7 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     const side = index % 2 === 0 ? "left" : "right";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
+        <button class={`detail-close-btn ${side}`} type="button">✕</button>
         <header class="detail-title">
           <h1>{data.title}</h1>
           <p>
@@ -48,67 +49,24 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
 </BaseLayout>
 
 <script is:inline>
-(function() {
-  var navCenter, brand;
-
-  function ensureCloseLink(side) {
-    if (!navCenter) navCenter = document.querySelector(".nav-center");
-    if (!brand) brand = document.querySelector(".brand");
-    if (!navCenter || !brand) return;
-
-    // Remove any existing dynamic close link first
-    removeCloseLink();
-
-    var closeEl = document.createElement("a");
-    closeEl.className = "close-link detail-close";
-    closeEl.href = "#";
-
-    if (side === "right") {
-      closeEl.textContent = "Close←";
-      navCenter.appendChild(closeEl);
-    } else {
-      closeEl.textContent = "+Close";
-      navCenter.insertBefore(closeEl, brand);
-    }
+document.addEventListener("click", function(event) {
+  // View button clicked → open overlay on that side
+  var viewBtn = event.target.closest(".view-link");
+  if (viewBtn) {
+    event.preventDefault();
+    var slug = viewBtn.dataset.slug;
+    if (!slug) return;
+    document.querySelectorAll(".detail-overlay").forEach(function(el) {
+      el.hidden = (el.id !== "detail-overlay-" + slug);
+    });
+    return;
   }
 
-  function removeCloseLink() {
-    var existing = document.querySelector(".detail-close");
-    if (existing) existing.remove();
+  // ✕ button inside overlay → close it
+  var closeBtn = event.target.closest(".detail-close-btn");
+  if (closeBtn) {
+    var overlay = closeBtn.closest(".detail-overlay");
+    if (overlay) overlay.hidden = true;
   }
-
-  document.addEventListener("click", function(event) {
-    // View button clicked → open overlay
-    var viewBtn = event.target.closest(".view-link");
-    if (viewBtn) {
-      event.preventDefault();
-      var slug = viewBtn.dataset.slug;
-      if (!slug) return;
-
-      // Determine which side this card is on
-      var card = viewBtn.closest(".project-card");
-      var side = (card && card.classList.contains("project-card-right")) ? "right" : "left";
-
-      // Hide all overlays, show target
-      document.querySelectorAll(".detail-overlay").forEach(function(el) {
-        el.hidden = (el.id !== "detail-overlay-" + slug);
-      });
-
-      // Show close link in nav (brand text stays untouched)
-      ensureCloseLink(side);
-
-      return;
-    }
-
-    // Close button clicked → hide overlay
-    var closeBtn = event.target.closest(".detail-close");
-    if (closeBtn) {
-      event.preventDefault();
-      document.querySelectorAll(".detail-overlay").forEach(function(el) {
-        el.hidden = true;
-      });
-      removeCloseLink();
-    }
-  });
-})();
+});
 </script>
