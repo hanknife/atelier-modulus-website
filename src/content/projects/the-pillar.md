@@ -20,6 +20,7 @@ tags:
   - "ongoing"
 featured: true
 order: 6
+category: projects
 ---
 
 Images are treated as construction documents for atmosphere. Each frame records

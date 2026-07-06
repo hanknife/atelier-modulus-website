@@ -18,6 +18,7 @@ tags:
   - "joints"
 featured: true
 order: 5
+category: projects
 ---
 
 The study collects fragments that can be read at several scales: furniture,

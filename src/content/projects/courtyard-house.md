@@ -19,6 +19,7 @@ tags:
   - "research"
 featured: true
 order: 1
+category: projects
 ---
 
 The project treats repeatable concrete-like elements as both model and

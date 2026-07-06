@@ -6,8 +6,8 @@ import ProjectCard from "../components/ProjectCard.astro";
 const projects = (await getCollection("projects"))
   .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
 
-const leftProjects = projects.filter((_, index) => index % 2 === 0);
-const rightProjects = projects.filter((_, index) => index % 2 === 1);
+const leftProjects = projects.filter((p) => p.data.category === "projects");
+const rightProjects = projects.filter((p) => p.data.category === "lehrgerueste");
 ---
 
 <BaseLayout>
@@ -20,14 +20,14 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     </div>
   </section>
 
-  {projects.map((project, index) => {
+  {projects.map((project) => {
     const data = project.data;
     const slug = project.id.replace(/\.mdx?$/, "");
     const detailImages = [data.cover_image, ...data.gallery];
     const displayDate = data.display_date ?? String(data.year);
-    const side = index % 2 === 0 ? "left" : "right";
+    const side = data.category === "lehrgerueste" ? "right" : "left";
     return (
-      <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
+      <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`} data-side={side}>
         <a href="#" class={`detail-nav-close detail-nav-close-${side} close-link`} data-detail-close="true">{side === "right" ? "Close←" : "→Close"}</a>
         <header class="detail-title">
           <h1>{data.title}</h1>
@@ -58,10 +58,18 @@ function closeDetailOverlays() {
   root.classList.remove("detail-overlay-open", "detail-overlay-left", "detail-overlay-right");
 }
 
+function closeBaseOverlays() {
+  ["projects-overlay", "lehrgerueste-overlay", "info-overlay"].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.hidden = true;
+  });
+}
+
 function openDetailOverlay(slug, side) {
   const target = document.getElementById("detail-overlay-" + slug);
   if (!target) return;
 
+  closeBaseOverlays();
   document.querySelectorAll(".detail-overlay").forEach(function(el) {
     el.hidden = el !== target;
   });
@@ -81,10 +89,30 @@ document.addEventListener("click", function(event) {
     return;
   }
 
+  var detailLink = event.target.closest("[data-detail-slug]");
+  if (detailLink) {
+    event.preventDefault();
+    var slug = detailLink.dataset.detailSlug;
+    var side = detailLink.dataset.detailSide || "left";
+    if (!slug) return;
+    openDetailOverlay(slug, side);
+    return;
+  }
+
   var closeBtn = event.target.closest("[data-detail-close]");
   if (closeBtn) {
     event.preventDefault();
     closeDetailOverlays();
   }
 });
+
+// Open overlay from URL params when the page loads.
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var openSlug = params.get("open");
+  var openSide = params.get("side") || "left";
+  if (openSlug) {
+    openDetailOverlay(openSlug, openSide);
+  }
+})();
 </script>

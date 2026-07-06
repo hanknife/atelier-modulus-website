@@ -14,6 +14,7 @@ const projects = defineCollection({
     cover_image: z.string(),
     gallery: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
+    category: z.enum(["projects", "lehrgerueste"]).default("projects"),
     display_date: z.string().optional(),
     featured: z.boolean().default(false),
     order: z.number().default(999)
