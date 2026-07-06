@@ -1,5 +1,6 @@
 ---
 title: "The World We Live In 000"
+list_title: "The World We Live In 000"
 year: 2025
 location: "Various Locations"
 type: "Visual Research"
@@ -18,7 +19,7 @@ tags:
   - "visual research"
   - "lehrgerueste"
 featured: true
-order: 8
+order: 3
 category: lehrgerueste
 ---
 

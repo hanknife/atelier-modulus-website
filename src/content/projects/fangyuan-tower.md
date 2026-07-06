@@ -1,5 +1,6 @@
 ---
 title: "012_Fangyuan Tower"
+list_title: "012 Fangyuan Tower"
 year: 2024
 location: "Various Locations"
 type: "Visual Research on Columns"
@@ -19,7 +20,7 @@ tags:
   - "visual research"
   - "ongoing"
 featured: true
-order: 4
+order: 3
 category: projects
 ---
 

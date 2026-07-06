@@ -1,5 +1,6 @@
 ---
 title: "005_The Pillar"
+list_title: "005 The Pillar"
 year: 2024
 location: "Various Locations"
 type: "Visual Research on Columns"
@@ -19,7 +20,7 @@ tags:
   - "visual research"
   - "ongoing"
 featured: true
-order: 6
+order: 2
 category: projects
 ---
 

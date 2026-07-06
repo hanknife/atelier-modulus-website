@@ -1,5 +1,6 @@
 ---
 title: "Pagoda 000"
+list_title: "Pagoda 000"
 year: 2025
 location: "Various Locations"
 type: "Research-Oriented Design"
@@ -18,7 +19,7 @@ tags:
   - "stacking"
   - "lehrgerueste"
 featured: true
-order: 7
+order: 2
 category: lehrgerueste
 ---
 

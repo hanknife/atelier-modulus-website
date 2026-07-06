@@ -1,5 +1,6 @@
 ---
-title: "018_Coupling Studies"
+title: "024_Computing Hut-Radical Normal I"
+list_title: "024 Computing Hut-Radical Normal I"
 year: 2025
 location: "Studio / Field"
 type: "Material Research"
@@ -17,7 +18,7 @@ tags:
   - "models"
   - "joints"
 featured: true
-order: 5
+order: 6
 category: projects
 ---
 

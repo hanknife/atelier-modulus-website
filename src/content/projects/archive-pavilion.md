@@ -1,5 +1,6 @@
 ---
 title: "000_P-∆"
+list_title: "P-∆ 000"
 year: 2026
 location: "Various Locations"
 type: "Visual Research on Columns"
@@ -19,7 +20,7 @@ tags:
   - "visual research"
   - "ongoing"
 featured: true
-order: 2
+order: 1
 category: lehrgerueste
 ---
 

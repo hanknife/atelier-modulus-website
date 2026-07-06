@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { getCollection } from "astro:content";
 
 const {
   title = "Atelier Modulus",
@@ -12,6 +13,12 @@ const {
   closeText = "→Close",
   brandLabel = "ATELIER MODULUS"
 } = Astro.props;
+
+const allProjects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
+
+const projectList = allProjects.filter((p) => p.data.category === "projects");
+const lehrgeruesteList = allProjects.filter((p) => p.data.category === "lehrgerueste");
 
 ---
 
@@ -39,23 +46,26 @@ const {
     </main>
     <aside class="half-overlay overlay-left project-overlay" id="projects-overlay" aria-label="Projects index" hidden>
       <nav>
-        <a href="/projects/archive-pavilion/">001 Ruin</a>
-        <a href="/projects/archive-pavilion/">005 The Pillar</a>
-        <a href="/projects/archive-pavilion/">012 Fangyuan Tower</a>
-        <a href="/projects/threshold-school/">018 Fangyuan Pavilion</a>
-        <a href="/projects/threshold-school/">022 Black Room</a>
-        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal I</a>
-        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal II</a>
-        <a href="/projects/threshold-school/">024 Computing Hut-Radical Normal III</a>
-        <a href="/projects/archive-pavilion/">030 Nauitlus</a>
-        <a href="/projects/courtyard-house/">032 Xiaobo Pavilion</a>
+        {projectList.map((project) => {
+          const slug = project.id.replace(/\.mdx?$/, "");
+          return (
+            <a href={`/?open=${slug}&side=left`} data-detail-slug={slug} data-detail-side="left">
+              {project.data.list_title ?? project.data.title}
+            </a>
+          );
+        })}
       </nav>
     </aside>
     <aside class="half-overlay overlay-right lehr-overlay" id="lehrgerueste-overlay" aria-label="Lehrgerüste index" hidden>
       <nav>
-        <a href="/projects/archive-pavilion/?side=right">P-∆ 000</a>
-        <a href="/projects/archive-pavilion/?side=right">Pagoda 000</a>
-        <a href="/projects/archive-pavilion/?side=right">The World We Live In 000</a>
+        {lehrgeruesteList.map((project) => {
+          const slug = project.id.replace(/\.mdx?$/, "");
+          return (
+            <a href={`/?open=${slug}&side=right`} data-detail-slug={slug} data-detail-side="right">
+              {project.data.list_title ?? project.data.title}
+            </a>
+          );
+        })}
       </nav>
     </aside>
     <aside class="half-overlay overlay-right info-overlay" id="info-overlay" aria-label="Info" hidden>

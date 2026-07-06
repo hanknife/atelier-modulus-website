@@ -1,5 +1,6 @@
 ---
-title: "018_Coupling Studies"
+title: "018_Fangyuan Pavilion"
+list_title: "018 Fangyuan Pavilion"
 year: 2025
 location: "Studio / Field"
 type: "Material Research"
@@ -16,7 +17,7 @@ tags:
   - "models"
   - "joints"
 featured: true
-order: 3
+order: 4
 category: projects
 ---
 

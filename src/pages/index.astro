@@ -6,8 +6,8 @@ import ProjectCard from "../components/ProjectCard.astro";
 const projects = (await getCollection("projects"))
   .sort((a, b) => a.data.order - b.data.order || b.data.year - a.data.year);
 
-const leftProjects = projects.filter((_, index) => index % 2 === 0);
-const rightProjects = projects.filter((_, index) => index % 2 === 1);
+const leftProjects = projects.filter((p) => p.data.category === "projects");
+const rightProjects = projects.filter((p) => p.data.category === "lehrgerueste");
 ---
 
 <BaseLayout>
@@ -20,12 +20,12 @@ const rightProjects = projects.filter((_, index) => index % 2 === 1);
     </div>
   </section>
 
-  {projects.map((project, index) => {
+  {projects.map((project) => {
     const data = project.data;
     const slug = project.id.replace(/\.mdx?$/, "");
     const detailImages = [data.cover_image, ...data.gallery];
     const displayDate = data.display_date ?? String(data.year);
-    const side = index % 2 === 0 ? "left" : "right";
+    const side = data.category === "lehrgerueste" ? "right" : "left";
     return (
       <aside class={`half-overlay overlay-${side} detail-overlay`} id={`detail-overlay-${slug}`} hidden aria-label={`${data.title} details`}>
         <a href="#" class={`detail-nav-close detail-nav-close-${side} close-link`} data-detail-close="true">{side === "right" ? "Close←" : "→Close"}</a>
@@ -81,10 +81,32 @@ document.addEventListener("click", function(event) {
     return;
   }
 
+  var listLink = event.target.closest("[data-detail-slug]");
+  if (listLink) {
+    var slug = listLink.dataset.detailSlug;
+    var side = listLink.dataset.detailSide || "left";
+    var target = document.getElementById("detail-overlay-" + slug);
+    if (!target) return;
+    event.preventDefault();
+    var listOverlay = listLink.closest(".project-overlay, .lehr-overlay");
+    if (listOverlay) listOverlay.hidden = true;
+    openDetailOverlay(slug, side);
+    return;
+  }
+
   var closeBtn = event.target.closest("[data-detail-close]");
   if (closeBtn) {
     event.preventDefault();
     closeDetailOverlays();
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+  var params = new URLSearchParams(window.location.search);
+  var openSlug = params.get("open");
+  var openSide = params.get("side");
+  if (openSlug) {
+    openDetailOverlay(openSlug, openSide || "left");
   }
 });
 </script>

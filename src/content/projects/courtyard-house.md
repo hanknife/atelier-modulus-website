@@ -1,5 +1,6 @@
 ---
 title: "032_Xiaobo Pavilion"
+list_title: "032 Xiaobo Pavilion"
 year: 2026
 location: "Coastal Region,China"
 type: "Research-Oriented Design"
@@ -18,7 +19,7 @@ tags:
   - "coastal"
   - "research"
 featured: true
-order: 1
+order: 10
 category: projects
 ---
 
