@@ -1,0 +1,10 @@
+.env
+.env.local
+node_modules
+dist
+.astro
+.next
+.vercel
+.DS_Store
+.pnpm-store
+

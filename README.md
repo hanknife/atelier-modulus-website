@@ -10,6 +10,14 @@ The project archive follows the Cargo reference: fixed header and footer links, 
 
 ## Local Development
 
+Use this GitHub clone as the source of truth:
+
+```text
+/Users/zijianhan/Documents/GitHub/atelier-modulus-website
+```
+
+The older `/Users/zijianhan/Documents/模象网站` folder is not part of the normal workflow anymore.
+
 ```bash
 npm install
 npm run dev
@@ -17,6 +25,8 @@ npm run build
 ```
 
 `npm run dev` starts the local Astro server. `npm run build` runs Astro checks and generates the static site in `dist`.
+
+For the full GitHub Desktop and Cloudflare workflow, see `WORKFLOW.md`.
 
 ## Add A Project
 
