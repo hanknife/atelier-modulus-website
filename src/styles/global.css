@@ -358,6 +358,31 @@ main {
   padding-top: clamp(26px, 4.1vw, 74px);
 }
 
+/* === Home page: fixed-height image containers, contain-fit, stable layout === */
+.home-index .project-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: clamp(260px, 36vh, 440px);
+  overflow: hidden;
+}
+
+.home-index .project-card img,
+.home-index .project-carousel img {
+  aspect-ratio: auto;
+  object-fit: contain;
+  object-position: center;
+  width: 100%;
+  height: 100%;
+}
+
+.home-index .project-card-right .project-carousel img {
+  width: min(68%, 760px);
+  height: 100%;
+  aspect-ratio: auto;
+  margin-left: auto;
+}
+
 .filter-strip {
   position: fixed;
   top: 30px;
@@ -775,6 +800,10 @@ main {
     grid-template-columns: 1fr;
     gap: 0.8em;
     padding-top: 18px;
+  }
+
+  .home-index .project-carousel {
+    height: clamp(180px, 26vh, 300px);
   }
 
   .text-page p,
