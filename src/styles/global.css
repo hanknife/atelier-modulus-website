@@ -358,19 +358,21 @@ main {
   padding-top: clamp(26px, 4.1vw, 74px);
 }
 
-/* === Home page: fixed-height image containers, contain-fit, stable layout === */
+/* === Home page: landscape-aspect containers, contain-fit, no cropping === */
 .home-index .project-carousel {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: clamp(260px, 36vh, 440px);
+  aspect-ratio: 3/2;
+  max-height: 440px;
+  min-height: 200px;
   overflow: hidden;
 }
 
 .home-index .project-card img,
 .home-index .project-carousel img {
   aspect-ratio: auto;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   width: 100%;
   height: 100%;
@@ -803,7 +805,8 @@ main {
   }
 
   .home-index .project-carousel {
-    height: clamp(180px, 26vh, 300px);
+    aspect-ratio: 3/2;
+    max-height: 300px;
   }
 
   .text-page p,
