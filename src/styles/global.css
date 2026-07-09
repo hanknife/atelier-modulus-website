@@ -28,7 +28,7 @@
   --chrome-top: 42px;
   --chrome-bottom: 58px;
   --index-size: clamp(42px, 2.65vw, 58px);
-  --body-size: clamp(15px, 1.1vw, 20px);
+  --body-size: clamp(16px, 1.2vw, 22px);
 }
 
 * {
