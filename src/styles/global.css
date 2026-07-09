@@ -28,7 +28,7 @@
   --chrome-top: 42px;
   --chrome-bottom: 58px;
   --index-size: clamp(42px, 2.65vw, 58px);
-  --body-size: clamp(12px, 0.85vw, 15px);
+  --body-size: clamp(14px, 1vw, 18px);
 }
 
 * {
@@ -767,7 +767,7 @@ main {
 @media (max-width: 820px) {
   html,
   body {
-    font-size: 15px;
+    font-size: 18px;
   }
 
   .nav-top {
