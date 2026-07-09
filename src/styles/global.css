@@ -385,6 +385,21 @@ main {
   margin-left: auto;
 }
 
+/* === Home page: smaller, lighter project text === */
+.home-index .project-card {
+  font-size: clamp(11px, 0.78vw, 14px);
+  line-height: 1.25;
+}
+
+.home-index .project-meta {
+  padding-top: clamp(10px, 1.4vw, 18px);
+  gap: clamp(14px, 2vw, 30px);
+}
+
+.home-index .view-link {
+  margin-top: 0.6em;
+}
+
 .filter-strip {
   position: fixed;
   top: 30px;
