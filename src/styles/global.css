@@ -213,7 +213,7 @@ main {
   top: 0;
   bottom: auto;
   height: 100vh;
-  z-index: 70;
+  z-index: 80;
   width: 50vw;
   background: transparent;
   overflow-y: auto;
