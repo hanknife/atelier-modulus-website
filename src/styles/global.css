@@ -380,10 +380,9 @@ main {
 }
 
 .home-index .project-card-right .project-carousel img {
-  width: min(68%, 760px);
+  width: 100%;
   height: 100%;
   aspect-ratio: auto;
-  margin: 0 auto;
 }
 
 /* === Home page: smaller, lighter project text === */
