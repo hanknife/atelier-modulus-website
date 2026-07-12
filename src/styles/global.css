@@ -214,7 +214,8 @@ main {
   bottom: auto;
   height: 100vh;
   z-index: 70;
-  background: var(--paper);
+  width: 50vw;
+  background: transparent;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--chrome-top) var(--pad-x) 72px;
