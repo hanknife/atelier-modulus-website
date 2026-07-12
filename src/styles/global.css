@@ -560,6 +560,12 @@ main {
   top: 740px;
 }
 
+.info-caption-lecture {
+  left: 46px;
+  top: 780px;
+  max-width: 46vw;
+}
+
 .info-caption {
   left: 0;
   top: auto;
