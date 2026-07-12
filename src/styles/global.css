@@ -1011,3 +1011,16 @@ main {
 .coupling-tile[data-detail-slug] {
   cursor: pointer;
 }
+
+/* === Footer white strip: same height as the header (chrome-top) === */
+.site-footer {
+  background: var(--paper);
+  min-height: var(--chrome-top);
+  align-items: end;
+}
+
+/* === Detail / Info overlays must sit above the fixed footer === */
+.info-overlay,
+.detail-overlay {
+  z-index: 100;
+}
