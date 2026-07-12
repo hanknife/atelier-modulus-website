@@ -1109,13 +1109,13 @@ main {
 .project-overlay.overlay-left {
   left: 0;
   right: auto;
-  padding: 16px 0 8px 52px;
+  padding: 16px 0 8px 40px;
 }
 
 .lehr-overlay.overlay-right {
   right: 0;
   left: auto;
-  padding: 10px 52px 8px 0;
+  padding: 16px 40px 8px 0;
 }
 
 /* === List overlays: per-line white background, each line as wide as its text ===
