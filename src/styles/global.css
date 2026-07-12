@@ -453,6 +453,12 @@ main {
   overflow-x: auto;
 }
 
+/* Coupling page nav bar gets the same opaque white background as the
+   homepage so the horizontally scrolling image board never shows through. */
+.coupling-state .site-header {
+  background: var(--paper);
+}
+
 .coupling-board {
   position: relative;
   width: 2820px;
