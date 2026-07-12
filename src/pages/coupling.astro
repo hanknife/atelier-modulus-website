@@ -1,5 +1,8 @@
 ---
+import { getCollection } from "astro:content";
+import sizeOf from "image-size";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ProjectDetailOverlays from "../components/ProjectDetailOverlays.astro";
 
 const boardImages = [
   "/images/project-3-1.jpg",
@@ -12,6 +15,47 @@ const boardImages = [
   "/images/cargo-xiaobo.png",
   "/images/project-3-3.jpg"
 ];
+
+// Manual overrides for images that appear in multiple projects.
+const manualImageOwners = {
+  "/images/project-1-1.jpg": "ruin",
+  "/images/project-1-2.jpg": "ruin",
+  "/images/project-2-1.jpg": "black-room",
+  "/images/project-2-2.jpg": "black-room",
+  "/images/project-3-1.jpg": "computing-hut-02",
+  "/images/project-3-2.jpg": "computing-hut-02",
+  "/images/project-3-3.jpg": "computing-hut-02",
+  "/images/cargo-xiaobo.png": "courtyard-house",
+  "/images/cargo-xiaobo-02.png": "courtyard-house"
+};
+
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order);
+
+const projectBySlug = Object.fromEntries(
+  projects.map((p) => [p.id.replace(/\.mdx?$/, ""), p])
+);
+
+function findOwner(image: string) {
+  if (manualImageOwners[image as keyof typeof manualImageOwners]) {
+    return projectBySlug[manualImageOwners[image as keyof typeof manualImageOwners]] || null;
+  }
+  const matches = projects.filter((p) => {
+    const images = [p.data.cover_image, ...p.data.gallery];
+    return images.includes(image);
+  });
+  return matches.length ? matches[0] : null;
+}
+
+const imageMeta = boardImages.map((image) => {
+  const filePath = new URL(`../../public${image}`, import.meta.url).pathname;
+  const dims = sizeOf(filePath) || { width: 1, height: 1 };
+  const { width, height } = dims;
+  const owner = findOwner(image);
+  const slug = owner ? owner.id.replace(/\.mdx?$/, "") : "";
+  const side = owner && owner.data.category === "lehrgerueste" ? "right" : "left";
+  return { image, width, height, slug, side };
+});
 ---
 
 <BaseLayout
@@ -21,12 +65,19 @@ const boardImages = [
   footerLeftHref="#filter"
   footerLeftToggle="filter"
 >
+  <ProjectDetailOverlays />
+
   <aside class="filter-strip" id="filter" aria-label="Active filters">
     <a href="/coupling/">Circle-Square-Circle, Among the Trees.</a>
   </aside>
   <section class="coupling-board" aria-label="Coupling image board">
-    {boardImages.map((image, index) => (
-      <figure class={`coupling-tile tile-${index + 1}`}>
+    {imageMeta.map(({ image, width, height, slug, side }, index) => (
+      <figure
+        class={`coupling-tile tile-${index + 1}`}
+        style={`aspect-ratio: ${width} / ${height};`}
+        data-detail-slug={slug}
+        data-detail-side={side}
+      >
         <img src={image} alt="" loading="lazy" />
       </figure>
     ))}

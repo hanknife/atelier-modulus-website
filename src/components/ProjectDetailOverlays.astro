@@ -1,0 +1,113 @@
+---
+import { getCollection } from "astro:content";
+
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order);
+---
+
+{
+  projects.map((project) => {
+    const data = project.data;
+    const slug = project.id.replace(/\.mdx?$/, "");
+    const detailImages = [data.cover_image, ...data.gallery];
+    const displayDate = data.display_date ?? String(data.year);
+    const side = data.category === "lehrgerueste" ? "right" : "left";
+    return (
+      <aside
+        class={`half-overlay overlay-${side} detail-overlay`}
+        id={`detail-overlay-${slug}`}
+        hidden
+        aria-label={`${data.title} details`}
+      >
+        <a
+          href="#"
+          class={`detail-nav-close detail-nav-close-${side} close-link`}
+          data-detail-close="true"
+        >
+          {side === "right" ? "Close←" : "→Close"}
+        </a>
+        <header class="detail-title">
+          <h1>{data.title}</h1>
+          <p>
+            {data.location}<br />
+            {data.type}<br />
+            {displayDate}
+          </p>
+        </header>
+        <div class="detail-copy">
+          <p>{data.description_en}</p>
+        </div>
+        <div class="detail-gallery" aria-label={`${data.title} gallery`}>
+          {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
+        </div>
+      </aside>
+    );
+  })
+}
+
+<script is:inline>
+  const root = document.documentElement;
+
+  function closeDetailOverlays() {
+    document.querySelectorAll(".detail-overlay").forEach(function (el) {
+      el.hidden = true;
+    });
+    root.classList.remove(
+      "detail-overlay-open",
+      "detail-overlay-left",
+      "detail-overlay-right"
+    );
+  }
+
+  function openDetailOverlay(slug, side) {
+    const target = document.getElementById("detail-overlay-" + slug);
+    if (!target) return;
+
+    document.querySelectorAll(".detail-overlay").forEach(function (el) {
+      el.hidden = el !== target;
+    });
+
+    root.classList.remove("detail-overlay-left", "detail-overlay-right");
+    root.classList.add("detail-overlay-open", "detail-overlay-" + side);
+  }
+
+  document.addEventListener("click", function (event) {
+    var viewBtn = event.target.closest(".view-link");
+    if (viewBtn) {
+      event.preventDefault();
+      var slug = viewBtn.dataset.slug;
+      var side = viewBtn.dataset.side || "left";
+      if (!slug) return;
+      openDetailOverlay(slug, side);
+      return;
+    }
+
+    var listLink = event.target.closest("[data-detail-slug]");
+    if (listLink) {
+      var slug = listLink.dataset.detailSlug;
+      var side = listLink.dataset.detailSide || "left";
+      var target = document.getElementById("detail-overlay-" + slug);
+      if (!target) return;
+      event.preventDefault();
+      var listOverlay = listLink.closest(".project-overlay, .lehr-overlay");
+      if (listOverlay) listOverlay.hidden = true;
+      openDetailOverlay(slug, side);
+      return;
+    }
+
+    var closeBtn = event.target.closest("[data-detail-close]");
+    if (closeBtn) {
+      event.preventDefault();
+      closeDetailOverlays();
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var params = new URLSearchParams(window.location.search);
+    var openSlug = params.get("open");
+    var openSide = params.get("side");
+    if (openSlug) {
+      openDetailOverlay(openSlug, openSide || "left");
+    }
+  });
+</script>

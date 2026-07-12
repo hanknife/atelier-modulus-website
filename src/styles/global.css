@@ -996,3 +996,18 @@ main {
 .detail-overlay.overlay-right[hidden] {
   transform: translateX(100%);
 }
+
+/* === Coupling collage: preserve natural image aspect ratios, no cropping === */
+.coupling-tile {
+  height: auto;
+}
+
+.coupling-tile img {
+  width: 100%;
+  height: auto;
+  object-fit: initial;
+}
+
+.coupling-tile[data-detail-slug] {
+  cursor: pointer;
+}
