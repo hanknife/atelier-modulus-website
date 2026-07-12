@@ -1,6 +1,6 @@
 ---
 title: "000_The World We Live In"
-list_title: "000 The World We Live In"
+list_title: "The World We Live In 000"
 year: 2025
 location: "Various Locations"
 type: "Visual Research"

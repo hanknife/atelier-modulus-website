@@ -1064,3 +1064,33 @@ main {
 .project-column .project-card {
   flex-shrink: 0;
 }
+
+/* === Coupling board: masonry-style horizontal columns ===
+   Tiles flow top-to-bottom in fixed-width columns, then wrap to the next
+   column, producing a horizontally-scrollable waterfall layout. */
+.coupling-board {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 30px;
+  width: auto;
+  min-height: calc(100vh - 42px);
+  height: calc(100vh - 42px);
+  padding: 30px 40px;
+}
+
+.coupling-tile {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 220px;
+  height: auto;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+/* Override any residual fixed heights from the old tile-1..tile-N absolute layout */
+.coupling-tile[class*="tile-"] {
+  height: auto;
+}
