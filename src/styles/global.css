@@ -1130,13 +1130,5 @@ main {
 .project-overlay.overlay-left nav a,
 .lehr-overlay.overlay-right nav a {
   background: var(--paper);
-  padding: 1px 6px;
-}
-
-.project-overlay.overlay-left nav a {
-  margin-left: -6px;
-}
-
-.lehr-overlay.overlay-right nav a {
-  margin-right: -6px;
+  padding: 1px 0;
 }
