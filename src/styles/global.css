@@ -459,6 +459,17 @@ main {
   background: var(--paper);
 }
 
+/* Match the homepage's top band: make the white nav strip exactly
+   --chrome-top tall, and pull the board up 22px so its first row meets
+   the header bottom (no extra white gap above the collage). */
+.coupling-state .site-header {
+  min-height: var(--chrome-top);
+}
+
+.coupling-state main {
+  padding-top: 20px;
+}
+
 .coupling-board {
   position: relative;
   width: 2820px;
