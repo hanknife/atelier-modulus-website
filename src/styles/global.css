@@ -148,7 +148,7 @@ main {
   left: var(--pad-x);
   right: var(--pad-x);
   bottom: 10px;
-  z-index: 20;
+  z-index: 90;
   display: grid;
   grid-template-columns: 1fr auto;
   pointer-events: none;
