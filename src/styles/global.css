@@ -210,13 +210,41 @@ main {
 }
 
 .info-overlay {
-  bottom: var(--chrome-bottom);
-  background: transparent;
-  pointer-events: none;
+  top: 0;
+  bottom: auto;
+  height: 100vh;
+  background: var(--paper);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--chrome-top) var(--pad-x) 72px;
+  scrollbar-width: none;
+  pointer-events: auto;
+}
+
+.info-overlay::-webkit-scrollbar {
+  display: none;
 }
 
 .info-overlay .black-label {
+  position: static;
   pointer-events: auto;
+}
+
+.info-overlay-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2em;
+}
+
+.info-grid-row {
+  display: flex;
+  gap: var(--gap-x);
+  align-items: flex-start;
+}
+
+.info-grid-row > * {
+  flex: 1;
+  max-width: 50%;
 }
 
 .archive-index {
@@ -532,44 +560,30 @@ main {
 }
 
 .info-address {
-  left: 0;
-  top: 36px;
   max-width: 55ch;
 }
 
 .info-bio {
-  left: 52%;
-  top: 36px;
-  max-width: 46vw;
+  max-width: 60ch;
 }
 
 .info-chip {
-  left: 46px;
 }
 
 .chip-exhibitions {
-  top: 560px;
 }
 
 .info-note {
-  left: 52%;
-  top: 560px;
 }
 
 .chip-lectures {
-  top: 740px;
 }
 
 .info-caption-lecture {
-  left: 46px;
-  top: 780px;
-  max-width: 46vw;
+  max-width: 60ch;
 }
 
 .info-caption {
-  left: 0;
-  top: auto;
-  bottom: 6px;
   max-width: 82vw;
 }
 
