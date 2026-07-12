@@ -48,27 +48,39 @@ const projects = (await getCollection("projects"))
 <script is:inline>
   const root = document.documentElement;
 
-  function closeDetailOverlays() {
-    document.querySelectorAll(".detail-overlay").forEach(function (el) {
-      el.hidden = true;
-    });
-    root.classList.remove(
-      "detail-overlay-open",
-      "detail-overlay-left",
-      "detail-overlay-right"
-    );
+  function updateRootOverlayClasses() {
+    var anyOpen = !!document.querySelector(".detail-overlay:not([hidden])");
+    if (!anyOpen) {
+      root.classList.remove(
+        "detail-overlay-open",
+        "detail-overlay-left",
+        "detail-overlay-right"
+      );
+      return;
+    }
+    root.classList.add("detail-overlay-open");
+    if (document.querySelector(".detail-overlay.overlay-left:not([hidden])")) {
+      root.classList.add("detail-overlay-left");
+    } else {
+      root.classList.remove("detail-overlay-left");
+    }
+    if (document.querySelector(".detail-overlay.overlay-right:not([hidden])")) {
+      root.classList.add("detail-overlay-right");
+    } else {
+      root.classList.remove("detail-overlay-right");
+    }
   }
 
   function openDetailOverlay(slug, side) {
-    const target = document.getElementById("detail-overlay-" + slug);
+    var target = document.getElementById("detail-overlay-" + slug);
     if (!target) return;
 
-    document.querySelectorAll(".detail-overlay").forEach(function (el) {
+    // Close any other overlay on the same side, keep the opposite side open.
+    document.querySelectorAll(".detail-overlay.overlay-" + side).forEach(function (el) {
       el.hidden = el !== target;
     });
 
-    root.classList.remove("detail-overlay-left", "detail-overlay-right");
-    root.classList.add("detail-overlay-open", "detail-overlay-" + side);
+    updateRootOverlayClasses();
   }
 
   document.addEventListener("click", function (event) {
@@ -98,7 +110,11 @@ const projects = (await getCollection("projects"))
     var closeBtn = event.target.closest("[data-detail-close]");
     if (closeBtn) {
       event.preventDefault();
-      closeDetailOverlays();
+      var overlay = closeBtn.closest(".detail-overlay");
+      if (overlay) {
+        overlay.hidden = true;
+        updateRootOverlayClasses();
+      }
     }
   });
 
