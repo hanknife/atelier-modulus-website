@@ -213,6 +213,7 @@ main {
   top: 0;
   bottom: auto;
   height: 100vh;
+  z-index: 70;
   background: var(--paper);
   overflow-y: auto;
   overscroll-behavior: contain;
