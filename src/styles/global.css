@@ -1117,3 +1117,26 @@ main {
   left: auto;
   padding: 10px 52px 8px 0;
 }
+
+/* === List overlays: per-line white background, each line as wide as its text ===
+   The overlay container is transparent; each link carries its own white
+   block that fits that line's text length. justify-items (start/end) keeps
+   the text 52px from the viewport edge. */
+.project-overlay.overlay-left,
+.lehr-overlay.overlay-right {
+  background: transparent;
+}
+
+.project-overlay.overlay-left nav a,
+.lehr-overlay.overlay-right nav a {
+  background: var(--paper);
+  padding: 1px 6px;
+}
+
+.project-overlay.overlay-left nav a {
+  margin-left: -6px;
+}
+
+.lehr-overlay.overlay-right nav a {
+  margin-right: -6px;
+}
