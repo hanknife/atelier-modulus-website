@@ -1094,3 +1094,26 @@ main {
 .coupling-tile[class*="tile-"] {
   height: auto;
 }
+
+/* === List overlays: equal edge inset and text-width white background ===
+   Project and Lehrgerüste list overlays shrink to the width of their text
+   instead of spanning half the viewport. Both keep the same 52px inset
+   from the nearest viewport edge. */
+.project-overlay.overlay-left,
+.lehr-overlay.overlay-right {
+  width: auto;
+  min-width: min-content;
+  max-width: 50vw;
+}
+
+.project-overlay.overlay-left {
+  left: 0;
+  right: auto;
+  padding: 16px 0 8px 52px;
+}
+
+.lehr-overlay.overlay-right {
+  right: 0;
+  left: auto;
+  padding: 10px 52px 8px 0;
+}
