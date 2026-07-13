@@ -1186,3 +1186,47 @@ main {
 .filter-term .site-footer a:first-child {
   justify-self: start;
 }
+
+/* === Coupling homepage board (Requirement Q): vertical-only collage ===
+   Replaces the old horizontal-scroll flex masonry with a CSS Grid that
+   packs tiles of varying sizes into a dense wall. The page scrolls
+   vertically only; horizontal scroll is killed on <main>. Scoped under
+   .coupling-state so it never touches the .filter-board term pages.
+   Append-only: original .coupling-board / .coupling-tile rules untouched. */
+.coupling-state main {
+  overflow-x: hidden;
+}
+
+.coupling-state .coupling-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-auto-rows: 56px;
+  grid-auto-flow: row dense;
+  gap: 20px;
+  align-content: start;
+  width: 100%;
+  height: auto;
+  min-height: calc(100vh - 42px);
+  padding: 30px 40px;
+  overflow: visible;
+}
+
+.coupling-state .coupling-tile {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* Varying tile sizes so the wall reads as random / staggered, not a grid.
+   Sizes are position-based (nth-child) so they survive the shuffle script,
+   which rewrites tile class names at runtime. */
+.coupling-state .coupling-tile:nth-child(6n+1) { grid-column: span 2; grid-row: span 3; }
+.coupling-state .coupling-tile:nth-child(6n+2) { grid-column: span 1; grid-row: span 4; }
+.coupling-state .coupling-tile:nth-child(6n+3) { grid-column: span 1; grid-row: span 2; }
+.coupling-state .coupling-tile:nth-child(6n+4) { grid-column: span 2; grid-row: span 4; }
+.coupling-state .coupling-tile:nth-child(6n+5) { grid-column: span 1; grid-row: span 3; }
+.coupling-state .coupling-tile:nth-child(6n)   { grid-column: span 1; grid-row: span 5; }

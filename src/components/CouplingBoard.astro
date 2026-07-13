@@ -16,12 +16,10 @@ const boardClass = cols ? "filter-board" : "coupling-board";
   aria-label="Coupling image board"
   style={cols ? `--term-cols: ${cols}` : undefined}
 >
-
-<section class="coupling-board" aria-label="Coupling image board">
   {imageMeta.map(({ image, width, height, slug, side }, index) => (
     <figure
       class={`coupling-tile tile-${index + 1}`}
-      style={`aspect-ratio: ${width} / ${height};`}
+      style={cols ? `aspect-ratio: ${width} / ${height};` : undefined}
       data-detail-slug={slug}
       data-detail-side={side}
     >
@@ -32,18 +30,19 @@ const boardClass = cols ? "filter-board" : "coupling-board";
 
 <script is:inline>
   document.addEventListener("DOMContentLoaded", function () {
-    var board = document.querySelector(".coupling-board");
-    if (!board) return;
-    var tiles = Array.from(board.querySelectorAll(".coupling-tile"));
-    for (var i = tiles.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = tiles[i];
-      tiles[i] = tiles[j];
-      tiles[j] = tmp;
-    }
-    tiles.forEach(function (tile, index) {
-      tile.className = "coupling-tile tile-" + (index + 1);
-      board.appendChild(tile);
+    var boards = document.querySelectorAll(".coupling-board, .filter-board");
+    boards.forEach(function (board) {
+      var tiles = Array.from(board.querySelectorAll(".coupling-tile"));
+      for (var i = tiles.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = tiles[i];
+        tiles[i] = tiles[j];
+        tiles[j] = tmp;
+      }
+      tiles.forEach(function (tile, index) {
+        tile.className = "coupling-tile tile-" + (index + 1);
+        board.appendChild(tile);
+      });
     });
   });
 </script>
