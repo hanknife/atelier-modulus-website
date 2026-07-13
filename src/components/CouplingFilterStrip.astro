@@ -1,0 +1,12 @@
+---
+import { couplingFilters } from "../data/couplingFilters";
+---
+
+<aside class="filter-strip" id="filter" aria-label="Active filters">
+  {couplingFilters.map((filter, index) => (
+    <>
+      <a href={`/filter/${filter.slug}/`}>{filter.label}</a>
+      {index < couplingFilters.length - 1 && <span>, </span>}
+    </>
+  ))}
+</aside>

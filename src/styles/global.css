@@ -1138,3 +1138,15 @@ main {
 .site-footer {
   z-index: 110;
 }
+
+/* === Coupling filter strip: comma-separated term links ===
+   The strip lists each filter term as a green link separated by ", ".
+   Inherits --body-size; does not redefine the type scale or font. */
+.filter-strip a {
+  color: var(--green);
+  text-decoration: none;
+}
+
+.filter-strip a:hover {
+  text-decoration: underline;
+}

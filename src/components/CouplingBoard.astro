@@ -1,0 +1,41 @@
+---
+import { getImageMeta } from "../lib/coupling";
+
+interface Props {
+  images: string[];
+}
+
+const { images } = Astro.props;
+const imageMeta = await getImageMeta(images);
+---
+
+<section class="coupling-board" aria-label="Coupling image board">
+  {imageMeta.map(({ image, width, height, slug, side }, index) => (
+    <figure
+      class={`coupling-tile tile-${index + 1}`}
+      style={`aspect-ratio: ${width} / ${height};`}
+      data-detail-slug={slug}
+      data-detail-side={side}
+    >
+      <img src={image} alt="" loading="lazy" />
+    </figure>
+  ))}
+</section>
+
+<script is:inline>
+  document.addEventListener("DOMContentLoaded", function () {
+    var board = document.querySelector(".coupling-board");
+    if (!board) return;
+    var tiles = Array.from(board.querySelectorAll(".coupling-tile"));
+    for (var i = tiles.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = tiles[i];
+      tiles[i] = tiles[j];
+      tiles[j] = tmp;
+    }
+    tiles.forEach(function (tile, index) {
+      tile.className = "coupling-tile tile-" + (index + 1);
+      board.appendChild(tile);
+    });
+  });
+</script>

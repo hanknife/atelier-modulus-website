@@ -1,0 +1,28 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProjectDetailOverlays from "../../components/ProjectDetailOverlays.astro";
+import CouplingFilterStrip from "../../components/CouplingFilterStrip.astro";
+import CouplingBoard from "../../components/CouplingBoard.astro";
+import { couplingFilters } from "../../data/couplingFilters";
+
+export const getStaticPaths = (() => {
+  return couplingFilters.map((filter) => ({
+    params: { term: filter.slug },
+    props: { filter }
+  }));
+}) satisfies GetStaticPaths;
+
+const { filter } = Astro.props;
+---
+
+<BaseLayout
+  title={`${filter.label} / Atelier Modulus`}
+  bodyClass="coupling-state filter-open"
+  footerLeftLabel="× REMOVE"
+  footerLeftHref="/coupling/"
+>
+  <ProjectDetailOverlays />
+  <CouplingFilterStrip />
+  <CouplingBoard images={filter.images} />
+</BaseLayout>
