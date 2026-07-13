@@ -9,6 +9,13 @@ interface Props {
 const { images, cols } = Astro.props;
 const imageMeta = await getImageMeta(images);
 const boardClass = cols ? "filter-board" : "coupling-board";
+
+// Homepage only: the source images all share a ~1.3 aspect ratio, so a
+// by-ratio size mapping would make every tile the same width. Instead we
+// assign an explicit column span per tile from a fixed varied pattern so the
+// wall reads as staggered (some wide, some narrow). The masonry script below
+// then sizes each tile's row span from its rendered height.
+const SIZE_PATTERN = [4, 2, 3, 1, 3, 2, 4, 1, 2, 3, 1, 4, 2, 3, 1, 2];
 ---
 
 <section
@@ -16,16 +23,20 @@ const boardClass = cols ? "filter-board" : "coupling-board";
   aria-label="Coupling image board"
   style={cols ? `--term-cols: ${cols}` : undefined}
 >
-  {imageMeta.map(({ image, width, height, slug, side }, index) => (
-    <figure
-      class={`coupling-tile tile-${index + 1}`}
-      style={cols ? `aspect-ratio: ${width} / ${height};` : undefined}
-      data-detail-slug={slug}
-      data-detail-side={side}
-    >
-      <img src={image} alt="" loading="lazy" />
-    </figure>
-  ))}
+  {imageMeta.map(({ image, width, height, slug, side }, index) => {
+    const size = cols ? undefined : SIZE_PATTERN[index % SIZE_PATTERN.length];
+    return (
+      <figure
+        class={`coupling-tile tile-${index + 1}${size ? ` size-${size}` : ""}`}
+        style={cols ? `aspect-ratio: ${width} / ${height};` : undefined}
+        data-size={size}
+        data-detail-slug={slug}
+        data-detail-side={side}
+      >
+        <img src={image} alt="" loading={cols ? "lazy" : "eager"} />
+      </figure>
+    );
+  })}
 </section>
 
 <script is:inline>
@@ -40,9 +51,33 @@ const boardClass = cols ? "filter-board" : "coupling-board";
         tiles[j] = tmp;
       }
       tiles.forEach(function (tile, index) {
-        tile.className = "coupling-tile tile-" + (index + 1);
+        var size = tile.dataset.size ? " size-" + tile.dataset.size : "";
+        tile.className = "coupling-tile tile-" + (index + 1) + size;
         board.appendChild(tile);
       });
     });
+    layoutMasonry();
+    window.addEventListener("load", layoutMasonry);
+    window.addEventListener("resize", layoutMasonry);
   });
+
+  // Size each coupling-board tile's grid row span from its rendered height so
+  // the image keeps its original aspect ratio with no crop and no overlap.
+  function layoutMasonry() {
+    var board = document.querySelector(".coupling-board");
+    if (!board) return;
+    var tiles = board.querySelectorAll(".coupling-tile");
+    tiles.forEach(function (tile) {
+      var img = tile.querySelector("img");
+      if (!img) return;
+      tile.style.gridRowEnd = "auto";
+      var h = img.getBoundingClientRect().height;
+      if (!h) {
+        img.addEventListener("load", layoutMasonry, { once: true });
+        return;
+      }
+      var span = Math.ceil(h) + 20;
+      tile.style.gridRowEnd = "span " + span;
+    });
+  }
 </script>
