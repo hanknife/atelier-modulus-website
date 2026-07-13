@@ -1150,3 +1150,24 @@ main {
 .filter-strip a:hover {
   text-decoration: underline;
 }
+
+/* === Filter term pages: fill the screen with larger tiles ===
+   With only a few images the vertical masonry left a lot of empty space, so
+   term pages lay tiles out in a horizontal wrap at ~2 columns that span the
+   full viewport width. Scoped to .filter-term so the base coupling board is
+   untouched. Append-only: original .coupling-board / .coupling-tile rules are
+   not rewritten. */
+.filter-term .coupling-board {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  width: 100vw;
+  height: auto;
+  min-height: calc(100vh - 42px);
+}
+
+.filter-term .coupling-tile {
+  width: calc(50vw - 55px);
+  height: auto;
+  margin-bottom: 30px;
+}

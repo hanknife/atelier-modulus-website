@@ -18,9 +18,10 @@ const { filter } = Astro.props;
 
 <BaseLayout
   title={`${filter.label} / Atelier Modulus`}
-  bodyClass="coupling-state filter-open"
+  bodyClass="coupling-state filter-open filter-term"
   footerLeftLabel="× REMOVE"
   footerLeftHref="/coupling/"
+  showInfo={false}
 >
   <ProjectDetailOverlays />
   <CouplingFilterStrip />

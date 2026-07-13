@@ -11,7 +11,8 @@ const {
   footerLeftToggle = "",
   closeHref = "",
   closeText = "→Close",
-  brandLabel = "ATELIER MODULUS"
+  brandLabel = "ATELIER MODULUS",
+  showInfo = true
 } = Astro.props;
 
 const allProjects = (await getCollection("projects"))
@@ -119,7 +120,7 @@ const lehrgeruesteList = allProjects.filter((p) => p.data.category === "lehrgeru
       >
         {footerLeftLabel}
       </a>
-      <a href="/info/" data-overlay-toggle="info">INFO</a>
+      {showInfo && <a href="/info/" data-overlay-toggle="info">INFO</a>}
     </footer>
     <script is:inline>
       const overlays = {
