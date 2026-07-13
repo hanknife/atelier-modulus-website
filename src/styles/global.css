@@ -1132,3 +1132,9 @@ main {
   background: var(--paper);
   padding: 1px 0;
 }
+
+/* === Footer sits above the overlays so its INFO toggle can close the
+   info overlay (overlays cover the header but must not cover the footer) === */
+.site-footer {
+  z-index: 110;
+}
