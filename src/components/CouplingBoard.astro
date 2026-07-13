@@ -8,10 +8,11 @@ interface Props {
 
 const { images, cols } = Astro.props;
 const imageMeta = await getImageMeta(images);
+const boardClass = cols ? "filter-board" : "coupling-board";
 ---
 
 <section
-  class="coupling-board"
+  class={boardClass}
   aria-label="Coupling image board"
   style={cols ? `--term-cols: ${cols}` : undefined}
 >

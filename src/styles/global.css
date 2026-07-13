@@ -1151,32 +1151,38 @@ main {
   text-decoration: underline;
 }
 
-/* === Filter term pages: fill the screen with larger tiles ===
-   With only a few images the vertical masonry left a lot of empty space, so
-   term pages lay tiles out in a horizontal wrap at ~2 columns that span the
-   full viewport width. Scoped to .filter-term so the base coupling board is
-   untouched. Append-only: original .coupling-board / .coupling-tile rules are
-   not rewritten. */
-.filter-term .coupling-board {
-  display: grid;
-  grid-template-columns: repeat(var(--term-cols, 3), minmax(0, 1fr));
-  align-items: start;
-  align-content: start;
+/* === Filter term pages: masonry that fills the viewport width ===
+   Uses its own .filter-board container class (NOT .coupling-board) so it is
+   never affected by the base coupling board's width:2820px / absolute-tile
+   rules. A real vertical masonry (flex column-wrap) so rows never get large
+   gaps from differing image heights. Columns scale with --term-cols; tile
+   width is computed so exactly --term-cols columns fill the viewport edge
+   to edge. Append-only: original .coupling-board / .coupling-tile untouched. */
+.filter-term .filter-board {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 30px;
-  width: 100vw;
-  height: auto;
+  width: 100%;
+  height: calc(100vh - 42px);
   min-height: calc(100vh - 42px);
   padding: 30px 40px;
 }
 
-.filter-term .coupling-tile {
-  width: 100%;
+.filter-term .filter-board .coupling-tile {
+  width: calc((100% - (var(--term-cols, 3) - 1) * 30px) / var(--term-cols, 3));
+  position: relative;
+  left: auto;
+  top: auto;
   height: auto;
-  margin-bottom: 0;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 /* Term-page footer only shows x REMOVE (no INFO), so force it to the
-   bottom-left corner regardless of how many links the grid ends up with. */
+   bottom-left corner. */
 .filter-term .site-footer a:first-child {
   justify-self: start;
 }
