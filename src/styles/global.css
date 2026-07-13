@@ -1230,3 +1230,12 @@ main {
 .coupling-state .coupling-tile:nth-child(6n+4) { grid-column: span 2; grid-row: span 4; }
 .coupling-state .coupling-tile:nth-child(6n+5) { grid-column: span 1; grid-row: span 3; }
 .coupling-state .coupling-tile:nth-child(6n)   { grid-column: span 1; grid-row: span 5; }
+
+/* Keep images inside their grid cells so they never overflow into neighbours.
+   The P-era `.coupling-tile img { height: auto }` works for the flex masonry
+   but in the Grid collage the cell height is fixed by grid-row spans, so an
+   auto-height image spills past the cell and overlaps adjacent tiles. */
+.coupling-state .coupling-board .coupling-tile img {
+  height: 100%;
+  object-fit: cover;
+}
