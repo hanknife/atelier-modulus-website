@@ -14,6 +14,10 @@ export const getStaticPaths = (() => {
 }) satisfies GetStaticPaths;
 
 const { filter } = Astro.props;
+// Scale columns with the number of images: at least 3 per row, growing as
+// more images are added, capped so a dense term page matches the coupling
+// board's column count.
+const cols = Math.min(12, Math.max(3, Math.round(filter.images.length / 2)));
 ---
 
 <BaseLayout
@@ -25,5 +29,5 @@ const { filter } = Astro.props;
 >
   <ProjectDetailOverlays />
   <CouplingFilterStrip />
-  <CouplingBoard images={filter.images} />
+  <CouplingBoard images={filter.images} cols={cols} />
 </BaseLayout>

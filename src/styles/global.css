@@ -1158,16 +1158,25 @@ main {
    untouched. Append-only: original .coupling-board / .coupling-tile rules are
    not rewritten. */
 .filter-term .coupling-board {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(var(--term-cols, 3), minmax(0, 1fr));
+  align-items: start;
+  align-content: start;
+  gap: 30px;
   width: 100vw;
   height: auto;
   min-height: calc(100vh - 42px);
+  padding: 30px 40px;
 }
 
 .filter-term .coupling-tile {
-  width: calc(50vw - 55px);
+  width: 100%;
   height: auto;
-  margin-bottom: 30px;
+  margin-bottom: 0;
+}
+
+/* Term-page footer only shows x REMOVE (no INFO), so force it to the
+   bottom-left corner regardless of how many links the grid ends up with. */
+.filter-term .site-footer a:first-child {
+  justify-self: start;
 }

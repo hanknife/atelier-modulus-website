@@ -3,11 +3,18 @@ import { getImageMeta } from "../lib/coupling";
 
 interface Props {
   images: string[];
+  cols?: number;
 }
 
-const { images } = Astro.props;
+const { images, cols } = Astro.props;
 const imageMeta = await getImageMeta(images);
 ---
+
+<section
+  class="coupling-board"
+  aria-label="Coupling image board"
+  style={cols ? `--term-cols: ${cols}` : undefined}
+>
 
 <section class="coupling-board" aria-label="Coupling image board">
   {imageMeta.map(({ image, width, height, slug, side }, index) => (
