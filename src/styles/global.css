@@ -1239,3 +1239,35 @@ main {
   height: 100%;
   object-fit: cover;
 }
+
+/* === Coupling homepage board (Requirement Q follow-up): preserve original
+   aspect ratios ===
+   Replaces the fixed-size Grid (which crops images via object-fit: cover)
+   with a CSS multi-column masonry so every image keeps its natural width:
+   height ratio. Tiles flow top-to-bottom in columns, columns wrap to fill
+   the viewport, and the page scrolls vertically only. Scoped under
+   .coupling-state so it never touches the .filter-board term pages.
+   Append-only: original .coupling-board / .coupling-tile / Q grid rules
+   untouched — this block just overrides them with higher specificity /
+   later order. */
+.coupling-state .coupling-board {
+  display: block;
+  column-width: 280px;
+  column-gap: 20px;
+}
+
+.coupling-state .coupling-board .coupling-tile {
+  display: inline-block;
+  vertical-align: top;
+  width: 100%;
+  height: auto;
+  grid-column: auto;
+  grid-row: auto;
+  margin: 0 0 20px 0;
+  break-inside: avoid;
+}
+
+.coupling-state .coupling-board .coupling-tile img {
+  height: auto;
+  object-fit: initial;
+}
