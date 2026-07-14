@@ -3,37 +3,31 @@ import { getImageMeta } from "../lib/coupling";
 
 interface Props {
   images: string[];
-  cols?: number;
 }
 
-const { images, cols } = Astro.props;
+const { images } = Astro.props;
 const imageMeta = await getImageMeta(images);
-const boardClass = cols ? "filter-board" : "coupling-board";
+const boardClass = "coupling-board";
 
-// Homepage only: the source images all share a ~1.3 aspect ratio, so a
-// by-ratio size mapping would make every tile the same width. Instead we
-// assign an explicit column span per tile from a fixed varied pattern so the
-// wall reads as staggered (some wide, some narrow). The masonry script below
-// then sizes each tile's row span from its rendered height.
+// Every source image shares a ~1.3 aspect ratio, so a by-ratio size mapping
+// would make each tile the same width. Instead each tile gets an explicit
+// column span from a fixed varied pattern so the wall reads as staggered
+// (some wide, some narrow). The masonry script sizes each tile's row span
+// from its rendered height so images keep their original aspect ratio.
 const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
 ---
 
-<section
-  class={boardClass}
-  aria-label="Coupling image board"
-  style={cols ? `--term-cols: ${cols}` : undefined}
->
+<section class={boardClass} aria-label="Coupling image board">
   {imageMeta.map(({ image, width, height, slug, side }, index) => {
-    const size = cols ? undefined : SIZE_PATTERN[index % SIZE_PATTERN.length];
+    const size = SIZE_PATTERN[index % SIZE_PATTERN.length];
     return (
       <figure
-        class={`coupling-tile tile-${index + 1}${size ? ` size-${size}` : ""}`}
-        style={cols ? `aspect-ratio: ${width} / ${height};` : undefined}
+        class={`coupling-tile tile-${index + 1} size-${size}`}
         data-size={size}
         data-detail-slug={slug}
         data-detail-side={side}
       >
-        <img src={image} alt="" loading={cols ? "lazy" : "eager"} />
+        <img src={image} alt="" loading="eager" />
       </figure>
     );
   })}
