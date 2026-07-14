@@ -1,0 +1,67 @@
+# Decap CMS configuration for Atelier Modulus
+# Docs: https://decapcms.org/docs/
+#
+# Content source: the same GitHub repo that drives the Cloudflare Pages build,
+# so saving here commits a Markdown file (with frontmatter) and triggers a redeploy.
+#
+# IMPORTANT: replace YOUR_CLOUDFLARE_DOMAIN below with the real Cloudflare domain
+# (e.g. atelier-modulus.pages.dev) before deploying. It must match the GitHub
+# OAuth App's Authorization callback URL: https://YOUR_CLOUDFLARE_DOMAIN/oauth/callback
+
+backend:
+  name: github
+  repo: hanknife/atelier-modulus-website
+  branch: main
+  # Points at the Cloudflare Pages Function OAuth proxy (see functions/oauth/*).
+  base_url: https://YOUR_CLOUDFLARE_DOMAIN/oauth
+  auth_scope: repo
+
+# Images are uploaded into public/images and referenced in frontmatter as /images/...
+media_folder: "public/images"
+public_folder: "/images"
+
+local_backend: false
+
+# Keep the editor usable without deep Git knowledge.
+publish_mode: simple
+
+collections:
+  - name: "projects"
+    label: "Projects & Lehrgerüste"
+    label_singular: "Project"
+    folder: "src/content/projects"
+    slug: "{{slug}}"
+    create: true
+    summary: "{{title}} · {{category}}"
+    fields:
+      - { name: title, label: "Title", widget: "string" }
+      - { name: list_title, label: "List Title (shown on index)", widget: "string", required: false }
+      - { name: year, label: "Year", widget: "number" }
+      - { name: location, label: "Location", widget: "string" }
+      - { name: type, label: "Type", widget: "string" }
+      - { name: status, label: "Status", widget: "string" }
+      - name: collaborators
+        label: "Collaborators"
+        widget: list
+        field: { name: item, label: "Name", widget: string }
+      - { name: description_cn, label: "Description (中文)", widget: "text" }
+      - { name: description_en, label: "Description (EN)", widget: "text" }
+      - { name: cover_image, label: "Cover Image", widget: "image" }
+      - name: gallery
+        label: "Gallery Images"
+        widget: list
+        field: { name: image, label: "Image", widget: image }
+      - name: tags
+        label: "Filters / 筛选标签"
+        widget: list
+        field: { name: tag, label: "Filter term", widget: string }
+        hint: "These become the per-project filter items."
+      - name: category
+        label: "Category (left/right column)"
+        widget: select
+        options: [projects, lehrgerueste]
+        default: projects
+        hint: "projects → left column (descending), lehrgerueste → right column."
+      - { name: display_date, label: "Display Date", widget: "string", required: false }
+      - { name: featured, label: "Featured", widget: "boolean", default: false }
+      - { name: order, label: "Order (sort key)", widget: "number", default: 999 }
