@@ -1312,3 +1312,15 @@ main {
   height: auto;
   object-fit: initial;
 }
+
+/* === Filter term pages: align strip to footer left and vertically center
+   in the 42px header strip. The strip defaults to top:30px left:36px,
+   which neither aligns with the footer FILTER (left:var(--pad-x)) nor
+   centers within the 42px chrome-top area. Override only on .filter-open. */
+.filter-open .filter-strip {
+  top: 0;
+  left: var(--pad-x);
+  height: var(--chrome-top);
+  display: flex;
+  align-items: center;
+}
