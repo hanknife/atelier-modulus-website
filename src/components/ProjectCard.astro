@@ -3,21 +3,11 @@ const { project, side = "left" } = Astro.props;
 const data = project.data;
 const slug = project.id.replace(/\.mdx?$/, "");
 const displayDate = data.display_date ?? String(data.year);
-const contentPath = `src/content/projects/${slug}.md`;
-const body = project.body ?? "";
-// Full frontmatter (plus raw body) embedded for the in-page editor to rebuild the file.
-const fm = JSON.stringify({ ...data, __body: body });
 const carouselImages = [data.cover_image, ...data.gallery];
 const viewHref = `/projects/${slug}/?side=${side}`;
 ---
 
-<article
-  class={`project-card project-card-${side}`}
-  data-slug={slug}
-  data-path={contentPath}
-  data-category={data.category}
-  data-frontmatter={fm}
->
+<article class={`project-card project-card-${side}`}>
   <figure>
     <button
       class="project-carousel"
@@ -28,20 +18,13 @@ const viewHref = `/projects/${slug}/?side=${side}`;
       <img src={data.cover_image} alt={`${data.title} image`} loading="lazy" />
     </button>
     <figcaption class="project-meta">
-      <strong><span data-edit="title">{data.title}</span></strong>
+      <strong>{data.title}</strong>
       <span class="project-facts">
-        <span data-edit="location">{data.location}</span><br />
-        <span data-edit="type">{data.type}</span><br />
-        <span data-edit="year">{displayDate}</span>
+        {data.location}<br />
+        {data.type}<br />
+        {displayDate}
         <a class="view-link" data-slug={slug} data-side={side} href={viewHref}>/View../</a>
       </span>
     </figcaption>
   </figure>
-  <div class="edit-controls" hidden>
-    <label class="edit-replace-img">
-      换封面图
-      <input type="file" accept="image/*" data-role="replace-image" hidden />
-    </label>
-    <button type="button" data-role="delete-card">删除</button>
-  </div>
 </article>
