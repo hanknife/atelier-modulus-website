@@ -700,7 +700,10 @@ async function save() {
   const pass = getPass();
   if (!pass) return;
   saving = true;
-  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
+  // Only collect the actual column cards (the editing surface). The detail
+  // overlays are read-only previews that share the same data-path; including
+  // them has caused duplicate-path / stale-content saves on GitHub.
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card"));
 
   // Instant feedback + disable to prevent double-submit.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
@@ -741,7 +744,8 @@ async function save() {
   }
 
   // A slug may be dirty in both the column card and the detail overlay.
-  // Deduplicate by path here so the server never receives duplicate entries.
+  // Although we now only collect column cards above, keep a final safety
+  // deduplication by path in case the selector ever changes.
   const deduped = new Map<string, (typeof items)[number]>();
   for (const item of items) {
     if (!item.path || (item.action !== "save" && item.action !== "delete")) continue;
@@ -766,7 +770,7 @@ async function save() {
     const errText = errs.join("\n");
     let hint: string;
     if (errText.includes("tree 422") || errText.includes("BadObjectState")) {
-      hint = "\n\n这通常是同一个项目卡片在编辑区和详情 overlay 里同时被修改，导致 GitHub 收到重复路径。刷新后重新编辑一次即可。若反复出现，请告诉我。";
+      hint = "\n\n刷新后重新编辑一次即可。若反复出现，请把截图和当时改了哪几个项目告诉我。";
     } else if (res.status === 401 || res.status === 403 || errText.includes("unauthorized")) {
       hint = "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。";
     } else {
@@ -778,7 +782,7 @@ async function save() {
 
   persistOverrides();
   // Clear dirty flags + deletion queue — everything saved.
-  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+  document.querySelectorAll<HTMLElement>(".project-column .project-card").forEach((card) => {
     delete card.dataset.dirty;
     delete card.dataset.deletedImages;
   });
