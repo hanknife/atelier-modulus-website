@@ -27,6 +27,73 @@ function parseFm(el: HTMLElement): Fm {
   }
 }
 
+// ---- Local persistence -----------------------------------------------------
+// Keep the editor showing the user's latest edits across reloads, even during
+// the 1–2 min Cloudflare rebuild. This only affects the /editor workspace
+// (the user's own editing surface); the public site is untouched and is still
+// rebuilt from frontmatter. No red lines crossed — on the public site, text
+// remains frontmatter-driven; here we merely re-show what the user typed.
+const LS_KEY = "am_editor_overrides_v1";
+
+function loadOverrides(): Record<string, any> {
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function collectOverrides(): Record<string, any> {
+  const state: Record<string, any> = {};
+  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+    const key = card.dataset.path || card.dataset.slug;
+    if (!key) return;
+    state[key] = {
+      frontmatter: card.dataset.frontmatter,
+      isNew: card.dataset.isNew,
+      toDelete: card.dataset.toDelete,
+    };
+  });
+  return state;
+}
+
+function persistOverrides() {
+  localStorage.setItem(LS_KEY, JSON.stringify(collectOverrides()));
+}
+
+function applyOverrides() {
+  const state = loadOverrides();
+  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+    const key = card.dataset.path || card.dataset.slug;
+    const s = key ? state[key] : undefined;
+    if (!s) return;
+    if (s.frontmatter) card.dataset.frontmatter = s.frontmatter;
+    if (s.isNew) card.dataset.isNew = s.isNew;
+    if (s.toDelete) card.dataset.toDelete = s.toDelete;
+    const fm = parseFm(card);
+    card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
+      const f = span.dataset.edit;
+      if (!f || fm[f] == null) return;
+      let val: any = fm[f];
+      if (f === "year" && fm.display_date) val = fm.display_date;
+      span.textContent = String(val);
+    });
+    const img = card.querySelector<HTMLImageElement>("img");
+    if (img && fm.cover_image) img.src = fm.cover_image;
+    const btn = card.querySelector<HTMLElement>(".project-carousel");
+    if (btn && fm.cover_image) {
+      try {
+        const arr = JSON.parse(btn.dataset.images || "[]");
+        arr[0] = fm.cover_image;
+        btn.dataset.images = JSON.stringify(arr);
+      } catch {
+        /* ignore */
+      }
+    }
+    if (s.toDelete === "1") card.style.opacity = "0.3";
+  });
+}
+
 function yamlVal(v: any): string {
   if (typeof v === "number" || typeof v === "boolean") return String(v);
   if (Array.isArray(v)) {
@@ -149,6 +216,7 @@ function newProject(side: "left" | "right") {
   const col = cols[side === "left" ? 0 : 1];
   col?.appendChild(card);
   makeCardEditable(card);
+  persistOverrides();
 }
 
 async function handleReplace(card: HTMLElement, file: File) {
@@ -159,6 +227,7 @@ async function handleReplace(card: HTMLElement, file: File) {
     card.dataset.frontmatter = JSON.stringify(fm);
     const img = card.querySelector("img");
     if (img) img.src = url;
+    persistOverrides();
   } catch (e) {
     alert("封面图上传失败：" + (e as Error).message);
   }
@@ -217,6 +286,7 @@ async function save() {
     );
     return;
   }
+  persistOverrides();
   alert(
     "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
       "构建完成后刷新本页，主站和编辑器里就能看到更新。"
@@ -261,9 +331,21 @@ function buildUI() {
       if (card && confirm("删除这个项目？")) {
         card.dataset.toDelete = "1";
         card.style.opacity = "0.3";
+        persistOverrides();
       }
+    }
+  });
+
+  // Persist text edits live (debounced) so a reload before rebuild still shows them.
+  let persistTimer: number | undefined;
+  document.addEventListener("input", (e) => {
+    const el = e.target as HTMLElement;
+    if (el.closest(".project-card")) {
+      clearTimeout(persistTimer);
+      persistTimer = window.setTimeout(persistOverrides, 400);
     }
   });
 }
 
+applyOverrides();
 buildUI();
