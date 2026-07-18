@@ -363,7 +363,7 @@ function updateOverlayListsFromDOM() {
     });
   }
 
-  const projects = items.filter((i) => i.category === "projects").sort((a, b) => b.order - a.order);
+  const projects = items.filter((i) => i.category === "projects").sort((a, b) => a.order - b.order);
   const lehr = items.filter((i) => i.category === "lehrgerueste").sort((a, b) => a.order - b.order);
 
   const buildNav = (list: Item[], side: "left" | "right") => {
@@ -559,7 +559,9 @@ function newProject(side: "left" | "right") {
   }
 
   const fm: Fm = {
-    title: "000_New Project", list_title: "New Project 000", year: new Date().getFullYear(), location: "",
+    title: "000_New Project",
+    list_title: side === "left" ? "000 New Project" : "New Project 000",
+    year: new Date().getFullYear(), location: "",
     type: "", status: "Draft", collaborators: [], description_cn: "", description_en: "",
     cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg", gallery: [], tags: [], category,
     display_date: "", featured: false, order, __body: "",
