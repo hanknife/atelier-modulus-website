@@ -115,6 +115,7 @@ function collectOverrides(): Record<string, any> {
       frontmatter: card.dataset.frontmatter,
       isNew: card.dataset.isNew,
       toDelete: card.dataset.toDelete,
+      dirty: card.dataset.dirty || undefined,
       deletedImages: card.dataset.deletedImages || undefined,
     };
   });
@@ -123,6 +124,11 @@ function collectOverrides(): Record<string, any> {
 
 function persistOverrides() {
   localStorage.setItem(LS_KEY, JSON.stringify(collectOverrides()));
+}
+
+/** Mark a card as having unsaved changes — only dirty cards get sent on save. */
+function markDirty(card: HTMLElement) {
+  card.dataset.dirty = "1";
 }
 
 function applyOverrides() {
@@ -134,6 +140,7 @@ function applyOverrides() {
     if (s.frontmatter) card.dataset.frontmatter = s.frontmatter;
     if (s.isNew) card.dataset.isNew = s.isNew;
     if (s.toDelete) card.dataset.toDelete = s.toDelete;
+    if (s.dirty) card.dataset.dirty = s.dirty;
     if (s.deletedImages) card.dataset.deletedImages = s.deletedImages;
     const fm = parseFm(card);
     card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
@@ -409,6 +416,7 @@ function initGalleryDragDrop(gallery: HTMLElement, card: HTMLElement) {
     dragSrc = null;
     gallery.querySelectorAll<HTMLElement>(".gallery-img-wrap").forEach((el) => el.classList.remove("drag-over"));
     syncGalleryFromDOM(card);
+    markDirty(card);
     persistOverrides();
   });
 
@@ -483,10 +491,12 @@ function newProject(side: "left" | "right") {
   const col = cols[side === "left" ? 0 : 1];
   col?.prepend(card); // 新项目插入到列的最顶部
   makeCardEditable(card);
+  markDirty(card); // new cards always need saving
   persistOverrides();
 }
 
 async function handleReplace(card: HTMLElement, file: File) {
+  markDirty(card);
   const img = card.querySelector<HTMLImageElement>("img");
   const carousel = card.querySelector<HTMLElement>(".project-carousel");
   // The cover that was on the card before this swap — used to roll back on failure.
@@ -573,6 +583,7 @@ async function handleGalleryAdd(card: HTMLElement, files: File[]) {
     }
   }
 
+  markDirty(card);
   persistOverrides();
 }
 
@@ -598,7 +609,12 @@ async function save() {
   const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[] }> = [];
   for (const card of cards) {
     const path = card.dataset.path ?? "?";
-    if (card.dataset.toDelete === "1") {
+    // Only send cards that changed (dirty) or are marked for deletion.
+    const isDirty = card.dataset.dirty === "1";
+    const isDeleted = card.dataset.toDelete === "1";
+    if (!isDirty && !isDeleted) continue;
+
+    if (isDeleted) {
       items.push({ action: "delete", path });
     } else {
       const fm = parseFm(card);
@@ -641,8 +657,9 @@ async function save() {
   }
 
   persistOverrides();
-  // Clear deletion queue — images already removed from R2.
+  // Clear dirty flags + deletion queue — everything saved.
   document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+    delete card.dataset.dirty;
     delete card.dataset.deletedImages;
   });
   done();
@@ -728,6 +745,7 @@ document.addEventListener("click", async (e) => {
       const card = wrap.closest<HTMLElement>(".project-card");
       if (card) {
         syncGalleryFromDOM(card);
+        markDirty(card);
         // Track this URL for R2 cleanup on save.
         if (deletedUrl && !deletedUrl.startsWith("blob:")) {
           const deleted = JSON.parse(card.dataset.deletedImages || "[]") as string[];
@@ -743,7 +761,9 @@ document.addEventListener("click", async (e) => {
   let persistTimer: number | undefined;
   document.addEventListener("input", (e) => {
     const el = e.target as HTMLElement;
-    if (el.closest(".project-card")) {
+    const card = el.closest<HTMLElement>(".project-card");
+    if (card) {
+      markDirty(card);
       clearTimeout(persistTimer);
       persistTimer = window.setTimeout(persistOverrides, 400);
     }
