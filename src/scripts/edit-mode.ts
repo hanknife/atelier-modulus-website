@@ -8,6 +8,69 @@ const API = "/api/save";
 const EDIT_MODE_CLASS = "edit-mode";
 const PASS_KEY = "am_edit_pass";
 
+// ---- Custom monochrome dialogs -------------------------------------------
+// Replace native confirm() / alert() so every editor interaction stays
+// in the site's black-and-white visual language.
+function showDialog(msg: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "am-dialog-overlay";
+    overlay.innerHTML =
+      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
+        <p class="am-dialog-msg">${msg}</p>
+        <div class="am-dialog-actions">
+          <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
+          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const ok = overlay.querySelector<HTMLElement>(".am-dialog-ok")!;
+    const cancel = overlay.querySelector<HTMLElement>(".am-dialog-cancel")!;
+
+    const close = (result: boolean) => {
+      overlay.remove();
+      resolve(result);
+    };
+    ok.addEventListener("click", () => close(true));
+    cancel.addEventListener("click", () => close(false));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+    document.addEventListener(
+      "keydown",
+      (e) => { if (e.key === "Escape") close(false); },
+      { once: true }
+    );
+    setTimeout(() => ok.focus(), 50);
+  });
+}
+
+/** Information-only dialog (single OK button). Replaces native alert(). */
+function showAlert(msg: string): Promise<void> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "am-dialog-overlay";
+    overlay.innerHTML =
+      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
+        <p class="am-dialog-msg">${msg}</p>
+        <div class="am-dialog-actions">
+          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const ok = overlay.querySelector<HTMLElement>(".am-dialog-ok")!;
+    const close = () => { overlay.remove(); resolve(); };
+    ok.addEventListener("click", close);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    document.addEventListener(
+      "keydown",
+      (e) => { if (e.key === "Escape") close(); },
+      { once: true }
+    );
+    setTimeout(() => ok.focus(), 50);
+  });
+}
+
 type Fm = Record<string, any>;
 
 function getPass(): string {
@@ -317,7 +380,7 @@ async function handleReplace(card: HTMLElement, file: File) {
   } catch (e) {
     URL.revokeObjectURL(previewUrl);
     swap(originalCover);
-    alert("封面图上传失败：" + (e as Error).message);
+    await showAlert("封面图上传失败：" + (e as Error).message);
   }
 }
 
@@ -377,7 +440,7 @@ async function save() {
   if (!res.ok || !data.ok) {
     const errs: string[] = data.errors ?? [JSON.stringify(data)];
     done();
-    alert(
+    await showAlert(
       "保存失败（未写入 GitHub）：\n" +
         errs.join("\n") +
         "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。"
@@ -387,7 +450,7 @@ async function save() {
 
   persistOverrides();
   done();
-  alert(
+  await showAlert(
     "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
       "构建完成后刷新本页，主站和编辑器里就能看到更新。"
   );
@@ -423,45 +486,6 @@ function buildUI() {
       if (file && card) handleReplace(card, file);
     }
   });
-
-// ---- Custom monochrome confirmation dialog --------------------------------
-// Replaces the browser's native confirm() so every editor interaction
-// stays in the site's black-and-white visual language.
-function showDialog(msg: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    // Overlay + dialog box
-    const overlay = document.createElement("div");
-    overlay.className = "am-dialog-overlay";
-    overlay.innerHTML =
-      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
-        <p class="am-dialog-msg">${msg}</p>
-        <div class="am-dialog-actions">
-          <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
-          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-
-    const ok = overlay.querySelector<HTMLElement>(".am-dialog-ok")!;
-    const cancel = overlay.querySelector<HTMLElement>(".am-dialog-cancel")!;
-
-    const close = (result: boolean) => {
-      overlay.remove();
-      resolve(result);
-    };
-    ok.addEventListener("click", () => close(true));
-    cancel.addEventListener("click", () => close(false));
-    // Click outside or Escape = cancel
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
-    document.addEventListener(
-      "keydown",
-      (e) => { if (e.key === "Escape") close(false); },
-      { once: true }
-    );
-    // Auto-focus OK for keyboard users
-    setTimeout(() => ok.focus(), 50);
-  });
-}
 
 document.addEventListener("click", async (e) => {
     const t = e.target as HTMLElement;

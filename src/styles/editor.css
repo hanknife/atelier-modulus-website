@@ -53,7 +53,7 @@ body.edit-mode [data-edit]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(255, 255, 255, 0.12);
 }
 .am-dialog-box {
   font: inherit;
