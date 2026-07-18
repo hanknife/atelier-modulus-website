@@ -655,11 +655,16 @@ async function save() {
   if (!res.ok || !data.ok) {
     const errs: string[] = data.errors ?? [JSON.stringify(data)];
     done();
-    await showAlert(
-      "保存失败（未写入 GitHub）：\n" +
-        errs.join("\n") +
-        "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。"
-    );
+    const errText = errs.join("\n");
+    let hint: string;
+    if (errText.includes("tree 422") || errText.includes("BadObjectState")) {
+      hint = "\n\n这通常是同一个项目卡片在编辑区和详情 overlay 里同时被修改，导致 GitHub 收到重复路径。刷新后重新编辑一次即可。若反复出现，请告诉我。";
+    } else if (res.status === 401 || res.status === 403 || errText.includes("unauthorized")) {
+      hint = "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。";
+    } else {
+      hint = "\n\n请截图完整错误信息发给我。";
+    }
+    await showAlert("保存失败（未写入 GitHub）：\n" + errText + hint);
     return;
   }
 

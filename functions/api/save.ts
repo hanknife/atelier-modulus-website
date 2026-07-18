@@ -126,6 +126,15 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       };
 
       const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[] }> = body.items ?? [];
+      // Deduplicate by path: if the same slug is dirty in both the column card
+      // and the overlay, keep only the last item. Duplicate tree entries cause
+      // GitHub to reject the tree with GitRPC::BadObjectState 422.
+      const deduped = new Map<string, (typeof items)[number]>();
+      for (const item of items) {
+        if (!item.path || (item.action !== "save" && item.action !== "delete")) continue;
+        deduped.set(item.path, item);
+      }
+      const uniqueItems = Array.from(deduped.values());
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
       // A whole-save retry handles the rare case where another save-all moved
@@ -148,7 +157,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           const treeEntries: Array<{ path: string; mode: string; type: string; sha: string | null }> = [];
           const liveOverrides: Array<{ slug: string; cover: string }> = [];
 
-          for (const item of items) {
+          for (const item of uniqueItems) {
             if (item.action === "delete") {
               // sha: null removes the file from the new tree.
               treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: null });
@@ -182,9 +191,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           const treeData = (await treeRes.json()) as { sha: string };
 
           // 4) Create ONE commit for all changes.
-          const commitMsg = items.length === 1
-            ? `update ${items[0].path}`
-            : `editor batch update (${items.length} files)`;
+          const commitMsg = uniqueItems.length === 1
+            ? `update ${uniqueItems[0].path}`
+            : `editor batch update (${uniqueItems.length} files)`;
           const newCommitRes = await fetch(`${gh}/git/commits`, {
             method: "POST",
             headers,
@@ -217,7 +226,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           // 7) Delete removed gallery images from R2 (best-effort).
           if (env.EDITOR_BUCKET && env.R2_PUBLIC_URL) {
             const r2Base = env.R2_PUBLIC_URL.replace(/\/+$/, "");
-            for (const item of items) {
+            for (const item of uniqueItems) {
               const urls: string[] = item.deletedImages ?? [];
               for (const url of urls) {
                 // Extract key from URL like https://pub-xxx.r2.dev/path/to/image.jpg
@@ -229,7 +238,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
               }
             }
           }
-          items.forEach((it) => results.push({ path: it.path, ok: true }));
+          uniqueItems.forEach((it) => results.push({ path: it.path, ok: true }));
           break;
         } catch (e: any) {
           if (attempt === 0) { results.length = 0; continue; }
