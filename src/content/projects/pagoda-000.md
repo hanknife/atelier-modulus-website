@@ -8,7 +8,7 @@ status: Ongoing
 collaborators: ["Atelier Modulus"]
 description_cn: 关于塔、层叠和垂直秩序的持续研究。
 description_en: "An ongoing study on pagoda-like structures, stacking, and vertical order. The project explores how repeated units create gradually changing spatial characters, from intimate chambers to open platforms."
-cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/20251106-nano-banana-2025-11-06T11-48-22.jpg"
+cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/20251106-nano-banana-2025-11-06T12-44-15.jpg"
 gallery: ["/images/project-1-2.jpg", "/images/project-1-3.jpg"]
 tags: ["pagoda", "stacking", "lehrgerueste"]
 category: lehrgerueste
