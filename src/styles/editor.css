@@ -70,21 +70,22 @@ body.edit-mode [data-edit]:focus {
 
 /* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
 body.edit-mode .detail-gallery {
-  display: flex;
+  display: flex !important;
   flex-wrap: wrap;
   gap: 6px;
 }
 body.edit-mode .detail-gallery img {
   display: block;
 }
-/* Wrap each gallery image in a position:relative container for the X button.
-   These are injected by edit-mode.ts on enterEdit(). */
+
+/* Wrapper around each image — establishes positioning context for the X button. */
 body.edit-mode .gallery-img-wrap {
-  position: relative;
+  position: relative;       /* ← anchors absolute children HERE, not elsewhere */
   display: inline-block;
   cursor: grab;
-  transition: opacity 0.15s;
-  line-height: 0; /* prevent descender space under inline-block */
+  transition: opacity 0.15s, outline 0.15s;
+  outline: 2px solid transparent;
+  line-height: 0;
 }
 body.edit-mode .gallery-img-wrap:active {
   cursor: grabbing;
@@ -94,7 +95,10 @@ body.edit-mode .gallery-img-wrap.dragging {
 }
 body.edit-mode .gallery-img-wrap.drag-over {
   outline: 2px dashed #111;
-  outline-offset: 2px;
+}
+/* When selected (clicked) → show the X button, highlight border. */
+body.edit-mode .gallery-img-wrap.selected {
+  outline: 2px solid #111;
 }
 body.edit-mode .gallery-img-wrap img {
   display: block;
@@ -102,37 +106,47 @@ body.edit-mode .gallery-img-wrap img {
   max-height: 140px;
   object-fit: contain;
 }
-/* Cover (first image): no X button, slightly larger. */
+/* Cover (first image): slightly larger, no X. */
 body.edit-mode .gallery-img-wrap.is-cover img {
   max-width: 220px;
   max-height: 165px;
 }
-/* X delete button — top-right corner of each non-cover image.
-   Uses positive offsets so it stays inside the wrapper (no overflow clipping). */
+
+/* X delete button — hidden by default, shown on .selected.
+   Positioned at top-right INSIDE its parent wrapper. */
 .gallery-del-btn {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1.5px solid #111;
   background: #fff;
   color: #111;
-  font-size: 13px;
-  line-height: 17px;
+  font-size: 14px;
+  line-height: 18px;
   text-align: center;
   cursor: pointer;
-  z-index: 3;
+  z-index: 10;
   user-select: none;
-  transition: background 0.10s, color 0.10s;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.10s, background 0.10s, color 0.10s;
+}
+/* Show only when the wrapper is .selected (user clicked the image). */
+body.edit-mode .gallery-img-wrap.selected > .gallery-del-btn,
+/* Always show on hover too as an extra affordance */
+body.edit-mode .gallery-img-wrap:hover > .gallery-del-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 .gallery-del-btn:hover {
   background: #111;
   color: #fff;
 }
 .gallery-del-btn::before {
-  content: "\00D7"; /* multiplication sign = clean ✕ */
+  content: "\00D7"; /* clean × */
 }
 
 /* === Custom confirmation dialog (monochrome white) === */

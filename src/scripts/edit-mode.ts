@@ -672,6 +672,19 @@ document.addEventListener("click", async (e) => {
         persistOverrides();
       }
     }
+
+    // Click a gallery image wrapper → toggle .selected to show/hide X button.
+    // Don't trigger when clicking the X button itself.
+    if (
+      document.body.classList.contains(EDIT_MODE_CLASS) &&
+      t.closest(".gallery-img-wrap") &&
+      !t.matches(".gallery-del-btn")
+    ) {
+      const wrap = t.closest<HTMLElement>(".gallery-img-wrap")!;
+      // Toggle this one; optionally deselect others (single-select feel).
+      wrap.classList.toggle("selected");
+    }
+
     // Click the ✕ delete button on a gallery image wrapper.
     if (t.matches(".gallery-del-btn")) {
       const wrap = t.parentElement; // .gallery-img-wrap
