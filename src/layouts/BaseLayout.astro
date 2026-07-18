@@ -18,10 +18,15 @@ const {
 const allProjects = (await getCollection("projects"))
   .sort((a, b) => a.data.order - b.data.order);
 
-// Projects 菜单：按 order 升序排列（001 → 032）
+// Projects 菜单：按 list_title 前三位数字升序排列（000 → 032）。
+// 与编辑器内的排序保持一致，使新增的 "000 New Project" 出现在最顶部。
 const projectList = allProjects
   .filter((p) => p.data.category === "projects")
-  .sort((a, b) => a.data.order - b.data.order);
+  .sort((a, b) =>
+    String(a.data.list_title ?? a.data.title).localeCompare(
+      String(b.data.list_title ?? b.data.title)
+    )
+  );
 // Lehrgerüste 菜单：按 order 升序（与主页从上到下位置一致）
 const lehrgeruesteList = allProjects
   .filter((p) => p.data.category === "lehrgerueste")

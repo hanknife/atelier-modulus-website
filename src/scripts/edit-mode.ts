@@ -927,3 +927,8 @@ document.addEventListener("click", async (e) => {
 
 applyOverrides();
 buildUI();
+// Rebuild the overlay menus as soon as the editor loads so the PROJECTS list
+// is sorted by its leading three-digit number (000 at the top) — instead of
+// showing the server-rendered order-based sort where the new project sinks to
+// the bottom. Matches the preview and the user's expectation.
+updateOverlayListsFromDOM();
