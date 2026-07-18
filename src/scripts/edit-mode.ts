@@ -343,7 +343,10 @@ function exitEdit() {
     edits (new cards, renames, deletions) are visible immediately on the
     editor's landing page without waiting for the Cloudflare rebuild. */
 function updateOverlayListsFromDOM() {
-  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
+  // Only use the column cards (EditorCards) as the source of truth. The
+  // detail overlays also carry .project-card, so including them would
+  // duplicate every entry.
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card"));
   type Item = { slug: string; category: string; order: number; text: string; side: "left" | "right" };
   const items: Item[] = [];
   for (const card of cards) {
