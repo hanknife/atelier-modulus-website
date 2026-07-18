@@ -8,8 +8,8 @@ status: Ongoing
 collaborators: ["Meyer Structural Office", "Lina Koh"]
 description_cn: 关于柱、栖居和被遗留结构的视觉研究，跨越不同地点收集空间样本。
 description_en: "A visual research project on columns, occupation, and leftover structures across multiple locations."
-cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-01.png"
-gallery: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-02.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-03.png"]
+cover_image: "/images/cargo-p-delta-01.png"
+gallery: ["/images/cargo-p-delta-02.png", "/images/cargo-p-delta-03.png"]
 tags: ["columns", "visual research", "ongoing"]
 category: projects
 display_date: Ongoing
