@@ -21,6 +21,7 @@ interface R2Bucket {
     value: ArrayBuffer | ArrayBufferView | string | ReadableStream | Blob,
     options?: { httpMetadata?: { contentType?: string } }
   ): Promise<unknown>;
+  delete(key: string): Promise<void>;
 }
 
 interface Env {
@@ -43,6 +44,42 @@ function b64encode(str: string): string {
   let bin = "";
   bytes.forEach((b) => (bin += String.fromCharCode(b)));
   return btoa(bin);
+}
+
+// Best-effort live overrides: a tiny JSON per project in R2 so the public site
+// can swap the cover image instantly (before the static rebuild finishes).
+function slugFromPath(path: string): string {
+  return path.replace(/^src\/content\/projects\//, "").replace(/\.mdx?$/, "");
+}
+
+function coverFromContent(content: string): string {
+  const fm = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!fm) return "";
+  const line = fm[1].match(/cover_image:\s*(.+)/);
+  if (!line) return "";
+  return line[1].trim().replace(/^["']|["']$/g, "");
+}
+
+async function writeLiveOverride(env: Env, slug: string, coverImage: string) {
+  if (!env.EDITOR_BUCKET) return;
+  try {
+    await env.EDITOR_BUCKET.put(
+      `live/${slug}.json`,
+      JSON.stringify({ cover_image: coverImage }),
+      { httpMetadata: { contentType: "application/json" } }
+    );
+  } catch {
+    /* non-fatal: live overlay is best-effort */
+  }
+}
+
+async function deleteLiveOverride(env: Env, slug: string) {
+  if (!env.EDITOR_BUCKET) return;
+  try {
+    await env.EDITOR_BUCKET.delete(`live/${slug}.json`);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function getSha(api: string, path: string, headers: Record<string, string>): Promise<string | null> {
@@ -112,6 +149,8 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           }),
         });
         if (!r.ok) return json({ error: await r.text() }, r.status);
+        const slug = slugFromPath(path);
+        await writeLiveOverride(env, slug, coverFromContent(body.content));
         return json({ ok: true });
       }
 
@@ -125,6 +164,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           body: JSON.stringify({ message: `delete ${path}`, sha }),
         });
         if (!r.ok) return json({ error: await r.text() }, r.status);
+        await deleteLiveOverride(env, slugFromPath(path));
         return json({ ok: true });
       }
 
