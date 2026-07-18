@@ -481,7 +481,7 @@ function newProject(side: "left" | "right") {
     </div>`;
   const cols = document.querySelectorAll<HTMLElement>(".project-column");
   const col = cols[side === "left" ? 0 : 1];
-  col?.appendChild(card);
+  col?.prepend(card); // 新项目插入到列的最顶部
   makeCardEditable(card);
   persistOverrides();
 }
