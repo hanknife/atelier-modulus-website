@@ -138,10 +138,14 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
       if (body.action === "save") {
         const path = body.path;
-        // Retry on 409 (SHA conflict): another request may have just written
-        // this file — fetch the fresh SHA and try again.
+        // Retry on 409 (SHA conflict): parallel requests may race on the
+        // same file's sha.  Use up to 5 attempts with a small random backoff
+        // so retries spread out and don't re-collide.
         let lastError: string | null = null;
-        for (let attempt = 0; attempt < 2; attempt++) {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
+          }
           const sha = await getSha(api, path, headers);
           const r = await fetch(`${api}/${path}`, {
             method: "PUT",
@@ -157,20 +161,22 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
             await writeLiveOverride(env, slug, coverFromContent(body.content));
             return json({ ok: true });
           }
-          // 409 = SHA mismatch — worth one retry with a fresh sha
           if (r.status !== 409) {
             lastError = await r.text();
             break;
           }
           lastError = await r.text();
         }
-        return json({ error: lastError ?? "save failed" }, 409);
+        return json({ error: lastError ?? "save failed after retries" }, 409);
       }
 
       if (body.action === "delete") {
         const path = body.path;
         let lastError: string | null = null;
-        for (let attempt = 0; attempt < 2; attempt++) {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
+          }
           const sha = await getSha(api, path, headers);
           if (!sha) return json({ ok: true });
           const r = await fetch(`${api}/${path}`, {
@@ -188,7 +194,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           }
           lastError = await r.text();
         }
-        return json({ error: lastError ?? "delete failed" }, 409);
+        return json({ error: lastError ?? "delete failed after retries" }, 409);
       }
 
     return json({ error: "unknown action" }, 400);
