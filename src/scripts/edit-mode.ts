@@ -325,16 +325,33 @@ async function save() {
   const pass = getPass();
   if (!pass) return;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
-  const errors: string[] = [];
-  for (const card of cards) {
-    let res: Response;
-    if (card.dataset.toDelete === "1") {
-      res = await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", path: card.dataset.path, passcode: pass }),
-      });
-    } else {
+
+  // Instant feedback — the user sees this the moment they click Save.
+  const saveBtn = document.querySelector<HTMLElement>("#edit-save");
+  const origText = saveBtn?.textContent ?? "保存";
+  if (saveBtn) saveBtn.textContent = "⏳ 保存中…";
+  const done = () => { if (saveBtn) saveBtn.textContent = origText; };
+
+  // Build all requests in parallel instead of sending them one-by-one in a
+  // for loop.  With N cards the old code waited for N sequential round-trips
+  // (each ~2–5 s); now all requests fly at once and we only wait for the
+  // slowest one.
+  const results = await Promise.allSettled(
+    cards.map(async (card) => {
+      const path = card.dataset.path ?? "?";
+      if (card.dataset.toDelete === "1") {
+        const res = await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", path, passcode: pass }),
+        });
+        if (!res.ok) {
+          let msg = `HTTP ${res.status}`;
+          try { const j = (await res.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* ignore */ }
+          throw new Error(`${path}: ${msg}`);
+        }
+        return;
+      }
       const fm = parseFm(card);
       card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
         const field = span.dataset.edit;
@@ -349,31 +366,34 @@ async function save() {
         }
       });
       const content = serializeFm(fm);
-      res = await fetch(API, {
+      const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save", path: card.dataset.path, content, passcode: pass }),
+        body: JSON.stringify({ action: "save", path, content, passcode: pass }),
       });
-    }
-    if (!res.ok) {
-      let msg = `HTTP ${res.status}`;
-      try {
-        const j = (await res.json()) as { error?: string };
-        if (j.error) msg = j.error;
-      } catch {
-        /* ignore */
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { const j = (await res.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* ignore */ }
+        throw new Error(`${path}: ${msg}`);
       }
-      errors.push(`${card.dataset.path ?? "?"}: ${msg}`);
-    }
-  }
+    })
+  );
+
+  done();
+
+  const errors = results
+    .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+    .map((r) => r.reason?.message ?? String(r.reason));
+
   if (errors.length) {
     alert(
-      "保存失败（未写入 GitHub）：\n" +
+      "部分/全部保存失败（未写入 GitHub）：\n" +
         errors.join("\n") +
         "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。"
     );
     return;
   }
+
   persistOverrides();
   alert(
     "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
