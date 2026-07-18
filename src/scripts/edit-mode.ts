@@ -448,7 +448,7 @@ function newProject(side: "left" | "right") {
   const category = side === "left" ? "projects" : "lehrgerueste";
   const slug = "new-" + Date.now();
   const fm: Fm = {
-    title: "新项目", list_title: "", year: new Date().getFullYear(), location: "",
+    title: "000_New Project", list_title: "", year: new Date().getFullYear(), location: "",
     type: "", status: "Draft", collaborators: [], description_cn: "", description_en: "",
     cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg", gallery: [], tags: [], category,
     display_date: "", featured: false, order: 999, __body: "",
