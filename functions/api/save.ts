@@ -125,7 +125,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         "X-GitHub-Api-Version": "2022-11-28",
       };
 
-      const items: Array<{ action: string; path: string; content?: string; cover?: string }> = body.items ?? [];
+      const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[] }> = body.items ?? [];
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
       // A whole-save retry handles the rare case where another save-all moved
@@ -212,6 +212,22 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           // 6) Write live overrides (best-effort, R2).
           for (const lo of liveOverrides) {
             await writeLiveOverride(env, lo.slug, lo.cover);
+          }
+
+          // 7) Delete removed gallery images from R2 (best-effort).
+          if (env.EDITOR_BUCKET && env.R2_PUBLIC_URL) {
+            const r2Base = env.R2_PUBLIC_URL.replace(/\/+$/, "");
+            for (const item of items) {
+              const urls: string[] = item.deletedImages ?? [];
+              for (const url of urls) {
+                // Extract key from URL like https://pub-xxx.r2.dev/path/to/image.jpg
+                let key = url;
+                if (url.startsWith(r2Base + "/")) {
+                  key = url.slice(r2Base.length + 1);
+                }
+                try { await env.EDITOR_BUCKET.delete(key); } catch { /* non-fatal */ }
+              }
+            }
           }
           items.forEach((it) => results.push({ path: it.path, ok: true }));
           break;

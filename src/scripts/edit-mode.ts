@@ -115,6 +115,7 @@ function collectOverrides(): Record<string, any> {
       frontmatter: card.dataset.frontmatter,
       isNew: card.dataset.isNew,
       toDelete: card.dataset.toDelete,
+      deletedImages: card.dataset.deletedImages || undefined,
     };
   });
   return state;
@@ -133,6 +134,7 @@ function applyOverrides() {
     if (s.frontmatter) card.dataset.frontmatter = s.frontmatter;
     if (s.isNew) card.dataset.isNew = s.isNew;
     if (s.toDelete) card.dataset.toDelete = s.toDelete;
+    if (s.deletedImages) card.dataset.deletedImages = s.deletedImages;
     const fm = parseFm(card);
     card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
       const f = span.dataset.edit;
@@ -562,7 +564,7 @@ async function save() {
   // The server processes them sequentially so GitHub SHA conflicts are
   // impossible — no retries needed, no 409s, and only 1 network round-trip
   // from the client (vs. N round-trips before).
-  const items: Array<{ action: string; path: string; content?: string; cover?: string }> = [];
+  const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[] }> = [];
   for (const card of cards) {
     const path = card.dataset.path ?? "?";
     if (card.dataset.toDelete === "1") {
@@ -581,7 +583,7 @@ async function save() {
           fm[field] = val;
         }
       });
-      items.push({ action: "save", path, content: serializeFm(fm), cover: fm.cover_image });
+      items.push({ action: "save", path, content: serializeFm(fm), cover: fm.cover_image, deletedImages: JSON.parse(card.dataset.deletedImages || "[]") });
     }
   }
 
@@ -608,6 +610,10 @@ async function save() {
   }
 
   persistOverrides();
+  // Clear deletion queue — images already removed from R2.
+  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+    delete card.dataset.deletedImages;
+  });
   done();
   await showAlert(
     "已保存 — Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
@@ -670,10 +676,18 @@ document.addEventListener("click", async (e) => {
     if (t.matches(".gallery-del-btn")) {
       const wrap = t.parentElement; // .gallery-img-wrap
       if (!wrap) return;
+      const img = wrap.querySelector<HTMLImageElement>("img");
+      const deletedUrl = img?.src ?? "";
       wrap.remove();
       const card = wrap.closest<HTMLElement>(".project-card");
       if (card) {
         syncGalleryFromDOM(card);
+        // Track this URL for R2 cleanup on save.
+        if (deletedUrl && !deletedUrl.startsWith("blob:")) {
+          const deleted = JSON.parse(card.dataset.deletedImages || "[]") as string[];
+          deleted.push(deletedUrl);
+          card.dataset.deletedImages = JSON.stringify(deleted);
+        }
         persistOverrides();
       }
     }
