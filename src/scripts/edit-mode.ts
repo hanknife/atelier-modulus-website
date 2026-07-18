@@ -363,7 +363,12 @@ function updateOverlayListsFromDOM() {
     });
   }
 
-  const projects = items.filter((i) => i.category === "projects").sort((a, b) => a.order - b.order);
+  // Project list: sort by the displayed text (list_title) so the leading
+  // three-digit number determines the order. This puts "000 New Project" at
+  // the top and matches the user's expectation of small-to-large numbering.
+  // Lehrgerueste keeps its order-based sort because its numbers appear on
+  // the right side of the list_title.
+  const projects = items.filter((i) => i.category === "projects").sort((a, b) => a.text.localeCompare(b.text));
   const lehr = items.filter((i) => i.category === "lehrgerueste").sort((a, b) => a.order - b.order);
 
   const buildNav = (list: Item[], side: "left" | "right") => {
