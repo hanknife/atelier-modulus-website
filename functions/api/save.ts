@@ -54,6 +54,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
   const repo = env.GITHUB_REPO || "hanknife/atelier-modulus-website";
   const api = `https://api.github.com/repos/${repo}/contents`;
   const headers = {
+    "User-Agent": "Atelier-Modulus-Editor/1.0",
     Authorization: `Bearer ${env.GITHUB_PAT}`,
     Accept: "application/vnd.github+json",
     "Content-Type": "application/json",
