@@ -137,10 +137,13 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       const uniqueItems = Array.from(deduped.values());
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
-      // A whole-save retry handles the rare case where another save-all moved
-      // the branch ref between our read and our commit.  GitHub rejects the
-      // ref update with 422; we re-read and try once more.
+      // A whole-save retry handles two transient GitHub issues:
+      // 1) Another save-all moved the branch ref between our read and commit.
+      // 2) GitHub returns tree 422 (GitRPC::BadObjectState) when a freshly
+      //    created blob isn't yet visible in the tree API. Re-fetching and
+      //    retrying usually resolves it.
       for (let attempt = 0; attempt < 2; attempt++) {
+        results.length = 0; // start each attempt with a clean slate
         try {
           // 1) Resolve the current branch tip + its tree.
           const refRes = await fetch(`${gh}/git/refs/heads/main`, { headers });
@@ -187,7 +190,16 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
             headers,
             body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries }),
           });
-          if (!treeRes.ok) { results.push({ path: "*", error: `tree ${treeRes.status}: ${await treeRes.text()}` }); break; }
+          if (!treeRes.ok) {
+            const treeErr = `tree ${treeRes.status}: ${await treeRes.text()}`;
+            // Tree 422 can be transient; retry once before giving up.
+            if (treeRes.status === 422 && attempt === 0) {
+              results.push({ path: "*", error: `${treeErr} (retrying…)` });
+              continue;
+            }
+            results.push({ path: "*", error: treeErr });
+            break;
+          }
           const treeData = (await treeRes.json()) as { sha: string };
 
           // 4) Create ONE commit for all changes.
@@ -212,6 +224,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           if (!updateRes.ok) {
             // 422 = ref moved under us → retry the whole save once.
             if (updateRes.status === 422 && attempt === 0) {
+              results.push({ path: "*", error: `ref-update ${updateRes.status}: ${await updateRes.text()} (retrying…)` });
               continue;
             }
             results.push({ path: "*", error: `ref-update ${updateRes.status}: ${await updateRes.text()}` });
@@ -241,7 +254,10 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           uniqueItems.forEach((it) => results.push({ path: it.path, ok: true }));
           break;
         } catch (e: any) {
-          if (attempt === 0) { results.length = 0; continue; }
+          if (attempt === 0) {
+            results.length = 0;
+            continue;
+          }
           results.push({ path: "*", error: String(e?.message ?? e) });
           break;
         }

@@ -641,10 +641,19 @@ async function save() {
     }
   }
 
+  // A slug may be dirty in both the column card and the detail overlay.
+  // Deduplicate by path here so the server never receives duplicate entries.
+  const deduped = new Map<string, (typeof items)[number]>();
+  for (const item of items) {
+    if (!item.path || (item.action !== "save" && item.action !== "delete")) continue;
+    deduped.set(item.path, item);
+  }
+  const uniqueItems = Array.from(deduped.values());
+
   const res = await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "save-all", items, passcode: pass }),
+    body: JSON.stringify({ action: "save-all", items: uniqueItems, passcode: pass }),
   });
 
   done();
