@@ -108,8 +108,8 @@ body.edit-mode .gallery-img-wrap.is-cover img {
   max-height: 165px;
 }
 
-/* X delete button — centered on each non-cover image in edit mode.
-   No circle, just a clean × that sits dead-center of the image. */
+/* X delete button — hidden by default, shown only when parent .gallery-img-wrap
+   has class .selected (user clicked that image). Centered dead on the image. */
 .gallery-del-btn {
   position: absolute;
   top: 50%;
@@ -117,28 +117,35 @@ body.edit-mode .gallery-img-wrap.is-cover img {
   transform: translate(-50%, -50%);
   width: auto;
   height: auto;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border: none;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
   line-height: 1;
   text-align: center;
   cursor: pointer;
   z-index: 10;
   user-select: none;
-  transition: background 0.10s;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, background 0.12s;
 }
-/* Cover has no X — hide if present. */
+/* Cover never gets an X — hide unconditionally. */
 body.edit-mode .gallery-img-wrap.is-cover > .gallery-del-btn {
-  display: none;
+  display: none !important;
+}
+/* Show ONLY on the clicked/selected image wrapper. */
+body.edit-mode .gallery-img-wrap.selected > .gallery-del-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 .gallery-del-btn:hover {
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
 }
 .gallery-del-btn::before {
-  content: "\00D7"; /* clean × */
+  content: "\00D7"; /* × */
 }
 
 /* === Custom confirmation dialog (monochrome white) === */

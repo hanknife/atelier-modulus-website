@@ -704,6 +704,20 @@ document.addEventListener("click", async (e) => {
       }
     }
 
+    // Click a gallery image → show ✕ on that image, hide on others.
+    if (
+      document.body.classList.contains(EDIT_MODE_CLASS) &&
+      t.closest(".gallery-img-wrap") &&
+      !t.matches(".gallery-del-btn")
+    ) {
+      const wrap = t.closest<HTMLElement>(".gallery-img-wrap")!;
+      if (wrap.classList.contains("is-cover")) return; // cover has no X
+      // Deselect all others, select this one.
+      document.querySelectorAll(".gallery-img-wrap.selected").forEach((w) => w.classList.remove("selected"));
+      wrap.classList.add("selected");
+      return; // don't fall through to del-btn handler
+    }
+
     // Click the ✕ delete button on a gallery image wrapper.
     if (t.matches(".gallery-del-btn")) {
       const wrap = t.parentElement; // .gallery-img-wrap
