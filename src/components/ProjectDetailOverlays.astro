@@ -35,7 +35,6 @@ const projects = (await getCollection("projects"))
         </a>
         <header class="detail-title">
           <h1><span data-edit="title">{data.title}</span></h1>
-          <p class="edit-list-title" data-edit="list_title">{data.list_title ?? data.title}</p>
           <p>
             <span data-edit="location">{data.location}</span><br />
             <span data-edit="type">{data.type}</span><br />

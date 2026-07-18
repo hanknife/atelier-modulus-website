@@ -68,21 +68,6 @@ body.edit-mode [data-edit]:focus {
   color: #fff;
 }
 
-/* --- List title edit field (only visible in edit mode) --- */
-.edit-list-title {
-  display: none;
-}
-body.edit-mode .edit-list-title {
-  display: block;
-  font-size: 0.75em;
-  opacity: 0.65;
-  margin-top: 0.15em;
-}
-body.edit-mode .edit-list-title:empty::before {
-  content: "(list title)";
-  opacity: 0.45;
-}
-
 /* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
 body.edit-mode .detail-gallery {
   display: flex !important;
