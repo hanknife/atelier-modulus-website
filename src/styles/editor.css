@@ -25,13 +25,13 @@
   color: #fff;
 }
 body.edit-mode [data-edit] {
-  outline: 1px dashed #c8862b;
+  outline: 1px dashed #111;
   outline-offset: 2px;
   cursor: text;
 }
 body.edit-mode [data-edit]:focus {
-  outline-color: #e0972c;
-  background: rgba(232, 151, 44, 0.08);
+  outline-color: #111;
+  background: rgba(0, 0, 0, 0.04);
 }
 .edit-controls {
   margin-top: 8px;
@@ -45,7 +45,7 @@ body.edit-mode [data-edit]:focus {
   text-decoration: underline;
 }
 
-/* === Custom confirmation dialog (monochrome) === */
+/* === Custom confirmation dialog (monochrome white) === */
 .am-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -53,13 +53,13 @@ body.edit-mode [data-edit]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.15);
 }
 .am-dialog-box {
   font: inherit;
-  background: #111;
-  color: #fff;
-  border: 1px solid #fff;
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
   padding: 24px 28px;
   max-width: 360px;
   width: calc(100% - 32px);
@@ -85,19 +85,19 @@ body.edit-mode [data-edit]:focus {
   transition: background 0.12s, color 0.12s;
 }
 .am-dialog-ok {
-  background: #fff;
-  color: #111;
-}
-.am-dialog-ok:hover {
-  background: #ddd;
-}
-.am-dialog-cancel {
+  background: #111;
   color: #fff;
 }
+.am-dialog-ok:hover {
+  background: #333;
+}
+.am-dialog-cancel {
+  color: #111;
+}
 .am-dialog-cancel:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.06);
 }
 .am-dialog-btn:focus-visible {
-  outline: 2px solid #e0972c;
+  outline: 2px solid #111;
   outline-offset: 2px;
 }

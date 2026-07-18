@@ -396,7 +396,7 @@ async function save() {
   // Instant feedback + disable to prevent double-submit.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
   const origText = saveBtn?.textContent ?? "保存";
-  if (saveBtn) { saveBtn.textContent = "⏳ 保存中…"; (saveBtn as HTMLButtonElement).disabled = true; }
+  if (saveBtn) { saveBtn.textContent = "保存中…"; (saveBtn as HTMLButtonElement).disabled = true; }
   const done = () => { saving = false; if (saveBtn) { saveBtn.textContent = origText; (saveBtn as HTMLButtonElement).disabled = false; } };
 
   // Build the batch payload: one item per card, sent in a SINGLE request.
@@ -451,7 +451,7 @@ async function save() {
   persistOverrides();
   done();
   await showAlert(
-    "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
+    "已保存 — Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
       "构建完成后刷新本页，主站和编辑器里就能看到更新。"
   );
 }
@@ -460,15 +460,15 @@ function buildUI() {
   const bar = document.createElement("div");
   bar.id = "edit-bar";
   bar.innerHTML = `
-    <button id="edit-toggle">✎ 编辑</button>
+    <button id="edit-toggle">编辑</button>
     <button id="edit-save" hidden>保存</button>
     <button id="edit-new-left" hidden>+ 项目</button>
     <button id="edit-new-right" hidden>+ Lehr</button>`;
   document.body.appendChild(bar);
 
-  bar.querySelector<HTMLElement>("#edit-toggle")!.addEventListener("click", () => {
+  bar.querySelector<HTMLElement>("#edit-toggle")!.addEventListener("click", async () => {
     if (document.body.classList.contains(EDIT_MODE_CLASS)) {
-      if (confirm("退出编辑？未保存的修改将丢失。")) window.location.reload();
+      if (await showDialog("退出编辑？未保存的修改将丢失。")) window.location.reload();
     } else {
       enterEdit();
     }
