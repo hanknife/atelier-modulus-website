@@ -40,12 +40,24 @@ body.edit-mode [data-edit]:focus {
   margin-top: 8px;
   display: flex;
   gap: 8px;
-  font-size: 12px;
 }
 .edit-controls .edit-replace-img,
 .edit-controls button {
   cursor: pointer;
-  text-decoration: underline;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #111;
+  color: #111;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.12s, color 0.12s;
+  text-decoration: none;
+}
+.edit-controls .edit-replace-img:hover,
+.edit-controls button:hover {
+  background: #111;
+  color: #fff;
 }
 
 /* === Custom confirmation dialog (monochrome white) === */
