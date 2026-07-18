@@ -217,8 +217,10 @@ async function save() {
     );
     return;
   }
-  alert("已保存，正在重新构建…");
-  window.location.reload();
+  alert(
+    "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
+      "构建完成后刷新本页，主站和编辑器里就能看到更新。"
+  );
 }
 
 function buildUI() {
