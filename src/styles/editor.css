@@ -24,14 +24,17 @@
   background: #111;
   color: #fff;
 }
-body.edit-mode [data-edit] {
+/* Single box around the entire editable text area — not per-field. */
+body.edit-mode .project-meta {
   outline: 1px dashed #111;
-  outline-offset: 2px;
+  outline-offset: -2px;
+}
+/* Individual fields stay editable without their own borders. */
+body.edit-mode [data-edit] {
   cursor: text;
 }
 body.edit-mode [data-edit]:focus {
-  outline-color: #111;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.06);
 }
 .edit-controls {
   margin-top: 8px;
