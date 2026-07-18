@@ -8,8 +8,8 @@ status: Schematic Design
 collaborators: []
 description_cn: 关于连接、节点和构件关系的系列研究，用模型和图像测试结构语言。
 description_en: "A series of studies on connections, joints, and component relations, tested through models and images."
-cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-3-1.jpg"
-gallery: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-3-2.jpg", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-3-3.jpg"]
+cover_image: "/images/project-3-1.jpg"
+gallery: ["/images/project-3-2.jpg", "/images/project-3-3.jpg"]
 tags: ["coupling", "models", "joints"]
 category: projects
 featured: true
