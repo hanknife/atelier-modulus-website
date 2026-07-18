@@ -326,32 +326,22 @@ async function save() {
   if (!pass) return;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
 
-  // Instant feedback — the user sees this the moment they click Save.
+  // Instant feedback.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
   const origText = saveBtn?.textContent ?? "保存";
   if (saveBtn) saveBtn.textContent = "⏳ 保存中…";
   const done = () => { if (saveBtn) saveBtn.textContent = origText; };
 
-  // Build all requests in parallel instead of sending them one-by-one in a
-  // for loop.  With N cards the old code waited for N sequential round-trips
-  // (each ~2–5 s); now all requests fly at once and we only wait for the
-  // slowest one.
-  const results = await Promise.allSettled(
-    cards.map(async (card) => {
-      const path = card.dataset.path ?? "?";
-      if (card.dataset.toDelete === "1") {
-        const res = await fetch(API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "delete", path, passcode: pass }),
-        });
-        if (!res.ok) {
-          let msg = `HTTP ${res.status}`;
-          try { const j = (await res.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* ignore */ }
-          throw new Error(`${path}: ${msg}`);
-        }
-        return;
-      }
+  // Build the batch payload: one item per card, sent in a SINGLE request.
+  // The server processes them sequentially so GitHub SHA conflicts are
+  // impossible — no retries needed, no 409s, and only 1 network round-trip
+  // from the client (vs. N round-trips before).
+  const items: Array<{ action: string; path: string; content?: string }> = [];
+  for (const card of cards) {
+    const path = card.dataset.path ?? "?";
+    if (card.dataset.toDelete === "1") {
+      items.push({ action: "delete", path });
+    } else {
       const fm = parseFm(card);
       card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
         const field = span.dataset.edit;
@@ -365,30 +355,26 @@ async function save() {
           fm[field] = val;
         }
       });
-      const content = serializeFm(fm);
-      const res = await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save", path, content, passcode: pass }),
-      });
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try { const j = (await res.json()) as { error?: string }; if (j.error) msg = j.error; } catch { /* ignore */ }
-        throw new Error(`${path}: ${msg}`);
-      }
-    })
-  );
+      items.push({ action: "save", path, content: serializeFm(fm) });
+    }
+  }
+
+  const res = await fetch(API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "save-all", items, passcode: pass }),
+  });
 
   done();
 
-  const errors = results
-    .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-    .map((r) => r.reason?.message ?? String(r.reason));
+  let data: any;
+  try { data = await res.json(); } catch { data = {}; }
 
-  if (errors.length) {
+  if (!res.ok || !data.ok) {
+    const errs: string[] = data.errors ?? [JSON.stringify(data)];
     alert(
-      "部分/全部保存失败（未写入 GitHub）：\n" +
-        errors.join("\n") +
+      "保存失败（未写入 GitHub）：\n" +
+        errs.join("\n") +
         "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。"
     );
     return;

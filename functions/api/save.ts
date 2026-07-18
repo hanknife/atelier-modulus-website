@@ -2,7 +2,7 @@
 //
 // Images ("upload" action) are written straight to a Cloudflare R2 bucket so
 // they show instantly at the public URL — no full site rebuild / CDN wait.
-// Text ("save" / "delete" actions, i.e. frontmatter markdown) is still written
+// Text ("save-all" / delete actions, i.e. frontmatter markdown) is written
 // back to the GitHub repo via the Contents API; those tolerate the 1–2 min
 // rebuild delay.
 //
@@ -13,8 +13,7 @@
 //   EDITOR_BUCKET   – the R2 bucket binding (created in Pages > Settings > Bindings)
 //   R2_PUBLIC_URL   – the public access URL, e.g. https://pub-xxxx.r2.dev
 
-// Minimal shape of the Cloudflare R2 bucket binding. The real implementation
-// is provided by the runtime; we declare just enough for type-checking.
+// Minimal shape of the Cloudflare R2 bucket binding.
 interface R2Bucket {
   put(
     key: string,
@@ -46,8 +45,6 @@ function b64encode(str: string): string {
   return btoa(bin);
 }
 
-// Best-effort live overrides: a tiny JSON per project in R2 so the public site
-// can swap the cover image instantly (before the static rebuild finishes).
 function slugFromPath(path: string): string {
   return path.replace(/^src\/content\/projects\//, "").replace(/\.mdx?$/, "");
 }
@@ -69,7 +66,7 @@ async function writeLiveOverride(env: Env, slug: string, coverImage: string) {
       { httpMetadata: { contentType: "application/json" } }
     );
   } catch {
-    /* non-fatal: live overlay is best-effort */
+    /* non-fatal */
   }
 }
 
@@ -104,14 +101,13 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
   }
 
   try {
-    // ---- upload: write image to R2, return public URL instantly -------------
+    // ---- upload: write image to R2 -----------------------------------------
     if (body.action === "upload") {
       if (!env.EDITOR_BUCKET || !env.R2_PUBLIC_URL) {
-        return json({ error: "server missing R2 config (EDITOR_BUCKET / R2_PUBLIC_URL)" }, 500);
+        return json({ error: "server missing R2 config" }, 500);
       }
       const key = body.filename as string;
       if (!key) return json({ error: "missing filename" }, 400);
-      // body.data is base64 (text); decode to binary for R2.
       const bin = atob(body.data as string);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -122,80 +118,82 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       return json({ url: `${base}/${key}` });
     }
 
-    // ---- save / delete: write frontmatter markdown back to GitHub ----------
-    if (!env.GITHUB_PAT) {
-      return json({ error: "server missing GITHUB_PAT" }, 500);
+    // ---- save-all: batch write all cards to GitHub ------------------------
+    // Accepts an array of { action: "save"|delete", path, content? } and
+    // processes them sequentially inside this single function invocation.
+    // Sequential processing eliminates all GitHub SHA conflicts — no need
+    // for retries or backoff. The client sends ONE request instead of N.
+    if (body.action === "save-all") {
+      if (!env.GITHUB_PAT) return json({ error: "server missing GITHUB_PAT" }, 500);
+      const repo = env.GITHUB_REPO || "hanknife/atelier-modulus-website";
+      const api = `https://api.github.com/repos/${repo}/contents`;
+      const headers = {
+        "User-Agent": "Atelier-Modulus-Editor/1.0",
+        Authorization: `Bearer ${env.GITHUB_PAT}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      };
+
+      const items: Array<{ action: string; path: string; content?: string }> = body.items ?? [];
+      const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
+
+      // Process sequentially — no SHA races possible.
+      for (const item of items) {
+        try {
+          if (item.action === "delete") {
+            const sha = await getSha(api, item.path, headers);
+            if (!sha) {
+              results.push({ path: item.path, ok: true });
+              continue;
+            }
+            const r = await fetch(`${api}/${item.path}`, {
+              method: "DELETE",
+              headers,
+              body: JSON.stringify({ message: `delete ${item.path}`, sha }),
+            });
+            if (r.ok) {
+              await deleteLiveOverride(env, slugFromPath(item.path));
+              results.push({ path: item.path, ok: true });
+            } else {
+              results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
+            }
+          } else if (item.action === "save" && item.content != null) {
+            const sha = await getSha(api, item.path, headers);
+            const r = await fetch(`${api}/${item.path}`, {
+              method: "PUT",
+              headers,
+              body: JSON.stringify({
+                message: `update ${item.path}`,
+                content: b64encode(item.content),
+                ...(sha ? { sha } : {}),
+              }),
+            });
+            if (r.ok) {
+              const slug = slugFromPath(item.path);
+              await writeLiveOverride(env, slug, coverFromContent(item.content));
+              results.push({ path: item.path, ok: true });
+            } else {
+              results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
+            }
+          } else {
+            results.push({ path: item.path, error: "invalid item" });
+          }
+        } catch (e: any) {
+          results.push({ path: item.path, error: String(e?.message ?? e) });
+        }
+      }
+
+      const failures = results.filter((r) => !r.ok);
+      if (failures.length > 0) {
+        return json({
+          ok: false,
+          errors: failures.map((f) => `${f.path}: ${f.error}`),
+          results,
+        }, 409);
+      }
+      return json({ ok: true, results });
     }
-    const repo = env.GITHUB_REPO || "hanknife/atelier-modulus-website";
-    const api = `https://api.github.com/repos/${repo}/contents`;
-    const headers = {
-      "User-Agent": "Atelier-Modulus-Editor/1.0",
-      Authorization: `Bearer ${env.GITHUB_PAT}`,
-      Accept: "application/vnd.github+json",
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    };
-
-      if (body.action === "save") {
-        const path = body.path;
-        // Retry on 409 (SHA conflict): parallel requests may race on the
-        // same file's sha.  Use up to 5 attempts with a small random backoff
-        // so retries spread out and don't re-collide.
-        let lastError: string | null = null;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
-          }
-          const sha = await getSha(api, path, headers);
-          const r = await fetch(`${api}/${path}`, {
-            method: "PUT",
-            headers,
-            body: JSON.stringify({
-              message: `update ${path}`,
-              content: b64encode(body.content),
-              ...(sha ? { sha } : {}),
-            }),
-          });
-          if (r.ok) {
-            const slug = slugFromPath(path);
-            await writeLiveOverride(env, slug, coverFromContent(body.content));
-            return json({ ok: true });
-          }
-          if (r.status !== 409) {
-            lastError = await r.text();
-            break;
-          }
-          lastError = await r.text();
-        }
-        return json({ error: lastError ?? "save failed after retries" }, 409);
-      }
-
-      if (body.action === "delete") {
-        const path = body.path;
-        let lastError: string | null = null;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
-          }
-          const sha = await getSha(api, path, headers);
-          if (!sha) return json({ ok: true });
-          const r = await fetch(`${api}/${path}`, {
-            method: "DELETE",
-            headers,
-            body: JSON.stringify({ message: `delete ${path}`, sha }),
-          });
-          if (r.ok) {
-            await deleteLiveOverride(env, slugFromPath(path));
-            return json({ ok: true });
-          }
-          if (r.status !== 409) {
-            lastError = await r.text();
-            break;
-          }
-          lastError = await r.text();
-        }
-        return json({ error: lastError ?? "delete failed after retries" }, 409);
-      }
 
     return json({ error: "unknown action" }, 400);
   } catch (e: any) {
