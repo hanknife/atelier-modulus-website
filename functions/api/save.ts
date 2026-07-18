@@ -2,9 +2,10 @@
 //
 // Images ("upload" action) are written straight to a Cloudflare R2 bucket so
 // they show instantly at the public URL — no full site rebuild / CDN wait.
-// Text ("save-all" / delete actions, i.e. frontmatter markdown) is written
-// back to the GitHub repo via the Contents API; those tolerate the 1–2 min
-// rebuild delay.
+// Text ("save-all" action, i.e. frontmatter markdown) is written back to the
+// GitHub repo via the Git Data API as ONE atomic commit regardless of how many
+// files changed — so the Cloudflare deploy queue doesn't pile up and there are
+// no per-file SHA races (no 409s).
 //
 // Set these in Cloudflare Pages > Settings > Environment variables (Production):
 //   EDIT_PASSCODE   – the passcode you type in the editor
@@ -79,14 +80,6 @@ async function deleteLiveOverride(env: Env, slug: string) {
   }
 }
 
-async function getSha(api: string, path: string, headers: Record<string, string>): Promise<string | null> {
-  const r = await fetch(`${api}/${path}`, { headers });
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`getSha ${r.status}: ${await r.text()}`);
-  const j = (await r.json()) as { sha?: string };
-  return j.sha ?? null;
-}
-
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
   let body: any;
@@ -122,11 +115,16 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     // Accepts an array of { action: "save"|delete", path, content? } and
     // processes them sequentially inside this single function invocation.
     // Sequential processing eliminates all GitHub SHA conflicts — no need
-    // for retries or backoff. The client sends ONE request instead of N.
+    // ---- save-all: batch write via Git Data API (single atomic commit) ----
+    // Instead of the Contents API (one commit per file → one Cloudflare build
+    // per file), we build blobs + one tree + ONE commit regardless of how many
+    // files changed.  Benefits:
+    //   • only 1 GitHub commit per save → the deploy queue doesn't pile up
+    //   • one atomic commit → no per-file SHA races, so no 409s possible
     if (body.action === "save-all") {
       if (!env.GITHUB_PAT) return json({ error: "server missing GITHUB_PAT" }, 500);
       const repo = env.GITHUB_REPO || "hanknife/atelier-modulus-website";
-      const api = `https://api.github.com/repos/${repo}/contents`;
+      const gh = `https://api.github.com/repos/${repo}`;
       const headers = {
         "User-Agent": "Atelier-Modulus-Editor/1.0",
         Authorization: `Bearer ${env.GITHUB_PAT}`,
@@ -138,66 +136,103 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       const items: Array<{ action: string; path: string; content?: string }> = body.items ?? [];
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
-      // Process sequentially — no SHA races possible under normal conditions.
-      // A single retry per item handles edge cases like a timed-out prior
-      // invocation that partially wrote before this one started.
-      for (const item of items) {
+      // A whole-save retry handles the rare case where another save-all moved
+      // the branch ref between our read and our commit.  GitHub rejects the
+      // ref update with 422; we re-read and try once more.
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          if (item.action === "delete") {
-            let ok = false;
-            for (let try_ = 0; try_ < 2 && !ok; try_++) {
-              const sha = await getSha(api, item.path, headers);
-              if (!sha) { ok = true; continue; }
-              const r = await fetch(`${api}/${item.path}`, {
-                method: "DELETE",
+          // 1) Resolve the current branch tip + its tree.
+          const refRes = await fetch(`${gh}/git/refs/heads/main`, { headers });
+          if (!refRes.ok) { results.push({ path: "*", error: `ref ${refRes.status}` }); break; }
+          const refData = (await refRes.json()) as { object: { sha: string } };
+          const baseCommitSha = refData.object.sha;
+
+          const commitRes = await fetch(`${gh}/git/commits/${baseCommitSha}`, { headers });
+          if (!commitRes.ok) { results.push({ path: "*", error: `commit ${commitRes.status}` }); break; }
+          const commitData = (await commitRes.json()) as { tree: { sha: string } };
+          const baseTreeSha = commitData.tree.sha;
+
+          // 2) Create a blob per file + collect tree entries.
+          const treeEntries: Array<{ path: string; mode: string; type: string; sha: string | null }> = [];
+          const liveOverrides: Array<{ slug: string; cover: string }> = [];
+
+          for (const item of items) {
+            if (item.action === "delete") {
+              // sha: null removes the file from the new tree.
+              treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: null });
+              await deleteLiveOverride(env, slugFromPath(item.path));
+            } else if (item.action === "save" && item.content != null) {
+              const blobRes = await fetch(`${gh}/git/blobs`, {
+                method: "POST",
                 headers,
-                body: JSON.stringify({ message: `delete ${item.path}`, sha }),
+                body: JSON.stringify({ content: b64encode(item.content), encoding: "base64" }),
               });
-              if (r.ok) { ok = true; await deleteLiveOverride(env, slugFromPath(item.path)); }
-              else if (r.status !== 409) {
-                results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
-                break;
-              } // else 409 → retry once with fresh sha
+              if (!blobRes.ok) {
+                results.push({ path: item.path, error: `blob ${blobRes.status}: ${await blobRes.text()}` });
+                continue;
+              }
+              const blobData = (await blobRes.json()) as { sha: string };
+              treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: blobData.sha });
+              const slug = slugFromPath(item.path);
+              liveOverrides.push({ slug, cover: coverFromContent(item.content) });
+            } else {
+              results.push({ path: item.path, error: "invalid item" });
             }
-            if (ok) results.push({ path: item.path, ok: true });
-          } else if (item.action === "save" && item.content != null) {
-            let ok = false;
-            for (let try_ = 0; try_ < 2 && !ok; try_++) {
-              const sha = await getSha(api, item.path, headers);
-              const r = await fetch(`${api}/${item.path}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify({
-                  message: `update ${item.path}`,
-                  content: b64encode(item.content),
-                  ...(sha ? { sha } : {}),
-                }),
-              });
-              if (r.ok) {
-                ok = true;
-                const slug = slugFromPath(item.path);
-                await writeLiveOverride(env, slug, coverFromContent(item.content));
-              } else if (r.status !== 409) {
-                results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
-                break;
-              } // else 409 → retry once with fresh sha
-            }
-            if (ok) results.push({ path: item.path, ok: true });
-          } else {
-            results.push({ path: item.path, error: "invalid item" });
           }
+
+          // 3) Create the tree (based on the current one).
+          const treeRes = await fetch(`${gh}/git/trees`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries }),
+          });
+          if (!treeRes.ok) { results.push({ path: "*", error: `tree ${treeRes.status}: ${await treeRes.text()}` }); break; }
+          const treeData = (await treeRes.json()) as { sha: string };
+
+          // 4) Create ONE commit for all changes.
+          const commitMsg = items.length === 1
+            ? `update ${items[0].path}`
+            : `editor batch update (${items.length} files)`;
+          const newCommitRes = await fetch(`${gh}/git/commits`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ message: commitMsg, tree: treeData.sha, parents: [baseCommitSha] }),
+          });
+          if (!newCommitRes.ok) { results.push({ path: "*", error: `commit-create ${newCommitRes.status}` }); break; }
+          const newCommitData = (await newCommitRes.json()) as { sha: string };
+
+          // 5) Point the branch at the new commit.  Pass the expected current
+          //    sha so a concurrent save fails fast instead of clobbering us.
+          const updateRes = await fetch(`${gh}/git/refs/heads/main`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ sha: newCommitData.sha, force: false }),
+          });
+          if (!updateRes.ok) {
+            // 422 = ref moved under us → retry the whole save once.
+            if (updateRes.status === 422 && attempt === 0) {
+              continue;
+            }
+            results.push({ path: "*", error: `ref-update ${updateRes.status}: ${await updateRes.text()}` });
+            break;
+          }
+
+          // 6) Write live overrides (best-effort, R2).
+          for (const lo of liveOverrides) {
+            await writeLiveOverride(env, lo.slug, lo.cover);
+          }
+          items.forEach((it) => results.push({ path: it.path, ok: true }));
+          break;
         } catch (e: any) {
-          results.push({ path: item.path, error: String(e?.message ?? e) });
+          if (attempt === 0) { results.length = 0; continue; }
+          results.push({ path: "*", error: String(e?.message ?? e) });
+          break;
         }
       }
 
       const failures = results.filter((r) => !r.ok);
       if (failures.length > 0) {
-        return json({
-          ok: false,
-          errors: failures.map((f) => `${f.path}: ${f.error}`),
-          results,
-        }, 409);
+        return json({ ok: false, errors: failures.map((f) => `${f.path}: ${f.error}`), results }, 422);
       }
       return json({ ok: true, results });
     }
