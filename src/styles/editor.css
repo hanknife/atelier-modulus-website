@@ -26,7 +26,8 @@
 }
 /* Single box around the entire editable text area — not per-field. */
 body.edit-mode .project-meta,
-body.edit-mode .detail-main {
+body.edit-mode .detail-main,
+body.edit-mode .detail-overlay {
   outline: 1px dashed #111;
   outline-offset: -2px;
 }
