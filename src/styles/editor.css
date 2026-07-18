@@ -44,3 +44,60 @@ body.edit-mode [data-edit]:focus {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* === Custom confirmation dialog (monochrome) === */
+.am-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.am-dialog-box {
+  font: inherit;
+  background: #111;
+  color: #fff;
+  border: 1px solid #fff;
+  padding: 24px 28px;
+  max-width: 360px;
+  width: calc(100% - 32px);
+}
+.am-dialog-msg {
+  margin: 0 0 20px;
+  line-height: 1.4;
+  font-size: var(--body-size, clamp(15px, 1.1vw, 20px));
+}
+.am-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.am-dialog-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 16px;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.12s, color 0.12s;
+}
+.am-dialog-ok {
+  background: #fff;
+  color: #111;
+}
+.am-dialog-ok:hover {
+  background: #ddd;
+}
+.am-dialog-cancel {
+  color: #fff;
+}
+.am-dialog-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.am-dialog-btn:focus-visible {
+  outline: 2px solid #e0972c;
+  outline-offset: 2px;
+}

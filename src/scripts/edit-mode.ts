@@ -90,7 +90,7 @@ function applyOverrides() {
         /* ignore */
       }
     }
-    if (s.toDelete === "1") card.style.opacity = "0.3";
+    if (s.toDelete === "1") card.style.display = "none";
   });
 }
 
@@ -424,13 +424,53 @@ function buildUI() {
     }
   });
 
-  document.addEventListener("click", (e) => {
+// ---- Custom monochrome confirmation dialog --------------------------------
+// Replaces the browser's native confirm() so every editor interaction
+// stays in the site's black-and-white visual language.
+function showDialog(msg: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Overlay + dialog box
+    const overlay = document.createElement("div");
+    overlay.className = "am-dialog-overlay";
+    overlay.innerHTML =
+      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
+        <p class="am-dialog-msg">${msg}</p>
+        <div class="am-dialog-actions">
+          <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
+          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const ok = overlay.querySelector<HTMLElement>(".am-dialog-ok")!;
+    const cancel = overlay.querySelector<HTMLElement>(".am-dialog-cancel")!;
+
+    const close = (result: boolean) => {
+      overlay.remove();
+      resolve(result);
+    };
+    ok.addEventListener("click", () => close(true));
+    cancel.addEventListener("click", () => close(false));
+    // Click outside or Escape = cancel
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
+    document.addEventListener(
+      "keydown",
+      (e) => { if (e.key === "Escape") close(false); },
+      { once: true }
+    );
+    // Auto-focus OK for keyboard users
+    setTimeout(() => ok.focus(), 50);
+  });
+}
+
+document.addEventListener("click", async (e) => {
     const t = e.target as HTMLElement;
     if (t.matches('button[data-role="delete-card"]')) {
       const card = t.closest<HTMLElement>(".project-card");
-      if (card && confirm("删除这个项目？")) {
+      if (card && await showDialog("删除这个项目？")) {
         card.dataset.toDelete = "1";
-        card.style.opacity = "0.3";
+        // Remove immediately — don't just fade it.
+        card.style.display = "none";
         persistOverrides();
       }
     }
