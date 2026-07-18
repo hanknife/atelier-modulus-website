@@ -127,12 +127,62 @@ function serializeFm(fm: Fm): string {
   return lines.join("\n");
 }
 
+// Compress a local image to a web-friendly size before upload so cover-image
+// swaps feel instant. Cover images are shown small on the site, so downscaling
+// to ~1600px and re-encoding as JPEG (PNG stays PNG) is invisible but makes the
+// upload payload a few hundred KB instead of several MB.
+async function compressImage(file: File, maxDim = 1600, quality = 0.82): Promise<{ blob: Blob; type: string }> {
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+  const scale = Math.min(1, maxDim / Math.max(width, height));
+  width = Math.max(1, Math.round(width * scale));
+  height = Math.max(1, Math.round(height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    return { blob: file, type: file.type || "image/jpeg" };
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  const isPng = file.type === "image/png";
+  const outType = isPng ? "image/png" : "image/jpeg";
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas.toBlob failed"))),
+      outType,
+      isPng ? undefined : quality
+    );
+  });
+  return { blob, type: outType };
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // result is "data:<type>;base64,<data>" — strip the prefix.
+      resolve(result.slice(result.indexOf(",") + 1));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function uploadImage(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  const b64 = btoa(binary);
+  let blob: Blob = file;
+  let type = file.type || "image/jpeg";
+  try {
+    const c = await compressImage(file);
+    blob = c.blob;
+    type = c.type;
+  } catch {
+    /* fall back to the original file if compression isn't supported */
+  }
+  const b64 = await blobToBase64(blob);
   const res = await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -140,7 +190,7 @@ async function uploadImage(file: File): Promise<string> {
       action: "upload",
       filename: file.name,
       data: b64,
-      contentType: file.type || "image/jpeg",
+      contentType: type,
       passcode: getPass(),
     }),
   });
