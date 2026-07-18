@@ -38,6 +38,16 @@ body.edit-mode [data-edit] {
 body.edit-mode [data-edit]:focus {
   background: rgba(0, 0, 0, 0.06);
 }
+/* Gallery images: clickable in edit mode (except first = cover). */
+body.edit-mode .detail-gallery img:not(:first-child) {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.12s;
+}
+body.edit-mode .detail-gallery img:not(:first-child):hover {
+  opacity: 1;
+  outline: 2px solid #111;
+}
 .edit-controls {
   margin-top: 8px;
   display: flex;

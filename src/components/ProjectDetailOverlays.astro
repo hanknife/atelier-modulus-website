@@ -49,6 +49,10 @@ const projects = (await getCollection("projects"))
         </div>
         <div class="edit-controls" hidden>
           <label class="edit-replace-img">换封面图<input type="file" accept="image/*" data-role="replace-image" hidden /></label>
+          <label class="edit-add-gallery">
+            添加图纸
+            <input type="file" accept="image/*" data-role="add-gallery" multiple hidden />
+          </label>
         </div>
       </aside>
     );

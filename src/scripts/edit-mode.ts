@@ -154,6 +154,22 @@ function applyOverrides() {
       }
     }
     if (s.toDelete === "1") card.style.display = "none";
+    // Restore gallery images from frontmatter (handles newly added ones).
+    const gallery = card.querySelector<HTMLElement>(".detail-gallery");
+    if (gallery && Array.isArray(fm.gallery)) {
+      const existingImgs = gallery.querySelectorAll<HTMLImageElement>("img");
+      // Keep the first img (cover), replace/add rest.
+      for (let i = existingImgs.length - 1; i >= 1; i--) {
+        existingImgs[i].remove(); // remove old non-cover images
+      }
+      for (const url of fm.gallery) {
+        const gImg = document.createElement("img");
+        gImg.src = url;
+        gImg.alt = "";
+        gImg.loading = "lazy";
+        gallery.appendChild(gImg);
+      }
+    }
   });
 }
 
@@ -384,6 +400,45 @@ async function handleReplace(card: HTMLElement, file: File) {
   }
 }
 
+// ---- Gallery (multi-image) upload -----------------------------------------
+// Appends new images to .detail-gallery, uploads each to R2 in background,
+// and updates the frontmatter gallery array.
+async function handleGalleryAdd(card: HTMLElement, files: File[]) {
+  const gallery = card.querySelector<HTMLElement>(".detail-gallery");
+  if (!gallery) return;
+  const fm = parseFm(card);
+
+  // 1) Instant local preview — append one <img> per file immediately.
+  const previews: { img: HTMLImageElement; blobUrl: string }[] = [];
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "";
+    img.loading = "lazy";
+    gallery.appendChild(img);
+    previews.push({ img, blobUrl: url });
+  }
+
+  // 2) Upload each image in background; swap blob → R2 URL on success.
+  for (let i = 0; i < previews.length; i++) {
+    const { img, blobUrl } = previews[i];
+    try {
+      const r2Url = await uploadImage(files[i]);
+      img.src = r2Url;
+      URL.revokeObjectURL(blobUrl);
+      fm.gallery.push(r2Url); // append to frontmatter
+    } catch (e) {
+      img.remove(); // failed upload → remove preview
+      URL.revokeObjectURL(blobUrl);
+      await showAlert("图纸上传失败：" + (e as Error).message);
+    }
+  }
+
+  card.dataset.frontmatter = JSON.stringify(fm);
+  persistOverrides();
+}
+
 let saving = false; // guard against double-click / rapid re-saves
 
 async function save() {
@@ -485,6 +540,15 @@ function buildUI() {
       const file = input.files?.[0];
       if (file && card) handleReplace(card, file);
     }
+    if (t.matches('input[data-role="add-gallery"]')) {
+      const input = t as HTMLInputElement;
+      const card = input.closest<HTMLElement>(".project-card");
+      const files = input.files;
+      if (files && files.length > 0 && card) {
+        handleGalleryAdd(card, Array.from(files));
+        input.value = ""; // reset so re-selecting same files works
+      }
+    }
   });
 
 document.addEventListener("click", async (e) => {
@@ -495,6 +559,25 @@ document.addEventListener("click", async (e) => {
         card.dataset.toDelete = "1";
         // Remove immediately — don't just fade it.
         card.style.display = "none";
+        persistOverrides();
+      }
+    }
+    // Click a gallery image in edit mode → remove it.
+    if (
+      document.body.classList.contains(EDIT_MODE_CLASS) &&
+      t.matches(".detail-gallery img") &&
+      !t.matches(".detail-gallery img:first-child")
+    ) {
+      const gallery = t.parentElement;
+      if (!gallery || !(t instanceof HTMLImageElement)) return;
+      const url = t.src;
+      t.remove();
+      const card = gallery.closest<HTMLElement>(".project-card");
+      if (card) {
+        const fm = parseFm(card);
+        fm.gallery = (fm.gallery as string[]).filter((u: string) => u !== url);
+        card.dataset.frontmatter = JSON.stringify(fm);
+        URL.revokeObjectURL(url); // clean up blob URLs from pending uploads
         persistOverrides();
       }
     }
