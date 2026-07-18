@@ -138,44 +138,51 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       const items: Array<{ action: string; path: string; content?: string }> = body.items ?? [];
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
-      // Process sequentially — no SHA races possible.
+      // Process sequentially — no SHA races possible under normal conditions.
+      // A single retry per item handles edge cases like a timed-out prior
+      // invocation that partially wrote before this one started.
       for (const item of items) {
         try {
           if (item.action === "delete") {
-            const sha = await getSha(api, item.path, headers);
-            if (!sha) {
-              results.push({ path: item.path, ok: true });
-              continue;
+            let ok = false;
+            for (let try_ = 0; try_ < 2 && !ok; try_++) {
+              const sha = await getSha(api, item.path, headers);
+              if (!sha) { ok = true; continue; }
+              const r = await fetch(`${api}/${item.path}`, {
+                method: "DELETE",
+                headers,
+                body: JSON.stringify({ message: `delete ${item.path}`, sha }),
+              });
+              if (r.ok) { ok = true; await deleteLiveOverride(env, slugFromPath(item.path)); }
+              else if (r.status !== 409) {
+                results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
+                break;
+              } // else 409 → retry once with fresh sha
             }
-            const r = await fetch(`${api}/${item.path}`, {
-              method: "DELETE",
-              headers,
-              body: JSON.stringify({ message: `delete ${item.path}`, sha }),
-            });
-            if (r.ok) {
-              await deleteLiveOverride(env, slugFromPath(item.path));
-              results.push({ path: item.path, ok: true });
-            } else {
-              results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
-            }
+            if (ok) results.push({ path: item.path, ok: true });
           } else if (item.action === "save" && item.content != null) {
-            const sha = await getSha(api, item.path, headers);
-            const r = await fetch(`${api}/${item.path}`, {
-              method: "PUT",
-              headers,
-              body: JSON.stringify({
-                message: `update ${item.path}`,
-                content: b64encode(item.content),
-                ...(sha ? { sha } : {}),
-              }),
-            });
-            if (r.ok) {
-              const slug = slugFromPath(item.path);
-              await writeLiveOverride(env, slug, coverFromContent(item.content));
-              results.push({ path: item.path, ok: true });
-            } else {
-              results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
+            let ok = false;
+            for (let try_ = 0; try_ < 2 && !ok; try_++) {
+              const sha = await getSha(api, item.path, headers);
+              const r = await fetch(`${api}/${item.path}`, {
+                method: "PUT",
+                headers,
+                body: JSON.stringify({
+                  message: `update ${item.path}`,
+                  content: b64encode(item.content),
+                  ...(sha ? { sha } : {}),
+                }),
+              });
+              if (r.ok) {
+                ok = true;
+                const slug = slugFromPath(item.path);
+                await writeLiveOverride(env, slug, coverFromContent(item.content));
+              } else if (r.status !== 409) {
+                results.push({ path: item.path, error: `${r.status}: ${await r.text()}` });
+                break;
+              } // else 409 → retry once with fresh sha
             }
+            if (ok) results.push({ path: item.path, ok: true });
           } else {
             results.push({ path: item.path, error: "invalid item" });
           }

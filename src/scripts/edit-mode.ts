@@ -321,16 +321,20 @@ async function handleReplace(card: HTMLElement, file: File) {
   }
 }
 
+let saving = false; // guard against double-click / rapid re-saves
+
 async function save() {
+  if (saving) return; // already in flight
   const pass = getPass();
   if (!pass) return;
+  saving = true;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
 
-  // Instant feedback.
+  // Instant feedback + disable to prevent double-submit.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
   const origText = saveBtn?.textContent ?? "保存";
-  if (saveBtn) saveBtn.textContent = "⏳ 保存中…";
-  const done = () => { if (saveBtn) saveBtn.textContent = origText; };
+  if (saveBtn) { saveBtn.textContent = "⏳ 保存中…"; (saveBtn as HTMLButtonElement).disabled = true; }
+  const done = () => { saving = false; if (saveBtn) { saveBtn.textContent = origText; (saveBtn as HTMLButtonElement).disabled = false; } };
 
   // Build the batch payload: one item per card, sent in a SINGLE request.
   // The server processes them sequentially so GitHub SHA conflicts are
@@ -372,6 +376,7 @@ async function save() {
 
   if (!res.ok || !data.ok) {
     const errs: string[] = data.errors ?? [JSON.stringify(data)];
+    done();
     alert(
       "保存失败（未写入 GitHub）：\n" +
         errs.join("\n") +
@@ -381,6 +386,7 @@ async function save() {
   }
 
   persistOverrides();
+  done();
   alert(
     "已保存 ✅  Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
       "构建完成后刷新本页，主站和编辑器里就能看到更新。"
