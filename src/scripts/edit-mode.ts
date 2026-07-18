@@ -96,7 +96,7 @@ function parseFm(el: HTMLElement): Fm {
 // (the user's own editing surface); the public site is untouched and is still
 // rebuilt from frontmatter. No red lines crossed — on the public site, text
 // remains frontmatter-driven; here we merely re-show what the user typed.
-const LS_KEY = "am_editor_overrides_v2";
+const LS_KEY = "am_editor_overrides_v3";
 
 function loadOverrides(): Record<string, any> {
   try {
@@ -108,7 +108,10 @@ function loadOverrides(): Record<string, any> {
 
 function collectOverrides(): Record<string, any> {
   const state: Record<string, any> = {};
-  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+  // Only collect the editing-surface column cards. The detail overlays are
+  // also .project-card and share the same path/slug; including them would
+  // overwrite the live edits with the server-rendered stale frontmatter.
+  document.querySelectorAll<HTMLElement>(".project-column .project-card").forEach((card) => {
     const key = card.dataset.path || card.dataset.slug;
     if (!key) return;
     state[key] = {
