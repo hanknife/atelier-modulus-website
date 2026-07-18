@@ -168,34 +168,54 @@ async function save() {
   const pass = getPass();
   if (!pass) return;
   const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
+  const errors: string[] = [];
   for (const card of cards) {
+    let res: Response;
     if (card.dataset.toDelete === "1") {
-      await fetch(API, {
+      res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", path: card.dataset.path, passcode: pass }),
       });
-      continue;
+    } else {
+      const fm = parseFm(card);
+      card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
+        const field = span.dataset.edit;
+        const val = span.textContent ?? "";
+        if (!field) return;
+        if (field === "year") {
+          const yr = parseInt(val, 10);
+          if (!isNaN(yr)) fm.year = yr;
+          else fm.display_date = val;
+        } else {
+          fm[field] = val;
+        }
+      });
+      const content = serializeFm(fm);
+      res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save", path: card.dataset.path, content, passcode: pass }),
+      });
     }
-    const fm = parseFm(card);
-    card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
-      const field = span.dataset.edit;
-      const val = span.textContent ?? "";
-      if (!field) return;
-      if (field === "year") {
-        const yr = parseInt(val, 10);
-        if (!isNaN(yr)) fm.year = yr;
-        else fm.display_date = val;
-      } else {
-        fm[field] = val;
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try {
+        const j = (await res.json()) as { error?: string };
+        if (j.error) msg = j.error;
+      } catch {
+        /* ignore */
       }
-    });
-    const content = serializeFm(fm);
-    await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "save", path: card.dataset.path, content, passcode: pass }),
-    });
+      errors.push(`${card.dataset.path ?? "?"}: ${msg}`);
+    }
+  }
+  if (errors.length) {
+    alert(
+      "保存失败（未写入 GitHub）：\n" +
+        errors.join("\n") +
+        "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。"
+    );
+    return;
   }
   alert("已保存，正在重新构建…");
   window.location.reload();
