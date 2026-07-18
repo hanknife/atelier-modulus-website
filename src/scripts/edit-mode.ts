@@ -899,21 +899,24 @@ document.addEventListener("click", async (e) => {
     if (!card) return;
     markDirty(card);
 
-    // New projects use a default list_title. For the left column (projects),
-    // keep list_title in sync with the title so the list shows the edited name.
-    // For lehrgerueste, leave the default list_title alone so the number stays
-    // on the right like the existing lehr entries ("New Project 000" rather
-    // than "000 New Project").
-    if (
-      card.dataset.isNew === "1" &&
-      el.dataset.edit === "title" &&
-      card.dataset.category !== "lehrgerueste"
-    ) {
+    // New projects use a default list_title. Sync it with the edited title so
+    // the overlay list shows the new name immediately.
+    // - Projects (left): keep the number on the left (e.g. "000 New Project").
+    // - Lehrgerueste (right): keep the number on the right (e.g. "New Project 000").
+    if (card.dataset.isNew === "1" && el.dataset.edit === "title") {
       const fm = parseFm(card);
       const nextTitle = el.textContent ?? "";
-      if (nextTitle && fm.list_title !== nextTitle) {
-        fm.list_title = nextTitle;
-        card.dataset.frontmatter = JSON.stringify(fm);
+      if (card.dataset.category === "lehrgerueste") {
+        const nextListTitle = nextTitle ? `${nextTitle} 000` : "";
+        if (nextListTitle && fm.list_title !== nextListTitle) {
+          fm.list_title = nextListTitle;
+          card.dataset.frontmatter = JSON.stringify(fm);
+        }
+      } else {
+        if (nextTitle && fm.list_title !== nextTitle) {
+          fm.list_title = nextTitle;
+          card.dataset.frontmatter = JSON.stringify(fm);
+        }
       }
     }
 
