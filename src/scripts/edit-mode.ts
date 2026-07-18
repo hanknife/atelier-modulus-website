@@ -455,11 +455,33 @@ function newProject(side: "left" | "right") {
   if (!document.body.classList.contains(EDIT_MODE_CLASS)) enterEdit();
   const category = side === "left" ? "projects" : "lehrgerueste";
   const slug = "new-" + Date.now();
+
+  // Order strategy:
+  // - Left column (projects) is sorted descending on the homepage/editor,
+  //   so give new projects a very high order to float to the top.
+  // - Right column (lehrgerueste) is sorted ascending. To make new lehr
+  //   projects appear at the top like the left side, give them an order
+  //   below the current minimum so they sort first after reload as well.
+  let order: number;
+  if (side === "left") {
+    order = 999;
+  } else {
+    const col = document.querySelectorAll<HTMLElement>(".project-column")[1];
+    const existingOrders = Array.from(col?.querySelectorAll<HTMLElement>(".project-card") ?? [])
+      .map((c) => {
+        const n = Number(parseFm(c).order);
+        return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+      })
+      .filter((n) => n !== Number.POSITIVE_INFINITY);
+    const minOrder = existingOrders.length ? Math.min(...existingOrders) : 1;
+    order = minOrder - 1;
+  }
+
   const fm: Fm = {
     title: "000_New Project", list_title: "New Project 000", year: new Date().getFullYear(), location: "",
     type: "", status: "Draft", collaborators: [], description_cn: "", description_en: "",
     cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg", gallery: [], tags: [], category,
-    display_date: "", featured: false, order: 999, __body: "",
+    display_date: "", featured: false, order, __body: "",
   };
   const card = document.createElement("article");
   card.className = `project-card project-card-${side}`;
@@ -489,13 +511,9 @@ function newProject(side: "left" | "right") {
   const cols = document.querySelectorAll<HTMLElement>(".project-column");
   const col = cols[side === "left" ? 0 : 1];
   if (col) {
-    // Match the public site order: left column descending (newest on top),
-    // right column ascending (newest at the bottom).
-    if (side === "left") {
-      col.prepend(card);
-    } else {
-      col.append(card);
-    }
+    // Insert every new project at the top of its column so the editing
+    // surface behaves consistently (newest first on both sides).
+    col.prepend(card);
   }
   makeCardEditable(card);
   markDirty(card); // new cards always need saving
@@ -783,11 +801,23 @@ document.addEventListener("click", async (e) => {
   document.addEventListener("input", (e) => {
     const el = e.target as HTMLElement;
     const card = el.closest<HTMLElement>(".project-card");
-    if (card) {
-      markDirty(card);
-      clearTimeout(persistTimer);
-      persistTimer = window.setTimeout(persistOverrides, 400);
+    if (!card) return;
+    markDirty(card);
+
+    // New projects use a default list_title. Keep it in sync with the title so
+    // the homepage list reflects the name the user typed instead of remaining
+    // "New Project 000" (which can look like cross-talk with a lehr entry).
+    if (card.dataset.isNew === "1" && el.dataset.edit === "title") {
+      const fm = parseFm(card);
+      const nextTitle = el.textContent ?? "";
+      if (nextTitle && fm.list_title !== nextTitle) {
+        fm.list_title = nextTitle;
+        card.dataset.frontmatter = JSON.stringify(fm);
+      }
     }
+
+    clearTimeout(persistTimer);
+    persistTimer = window.setTimeout(persistOverrides, 400);
   });
 }
 
