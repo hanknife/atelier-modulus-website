@@ -96,7 +96,7 @@ function parseFm(el: HTMLElement): Fm {
 // (the user's own editing surface); the public site is untouched and is still
 // rebuilt from frontmatter. No red lines crossed — on the public site, text
 // remains frontmatter-driven; here we merely re-show what the user typed.
-const LS_KEY = "am_editor_overrides_v3";
+const LS_KEY = "am_editor_overrides_v4";
 
 function loadOverrides(): Record<string, any> {
   try {
@@ -905,28 +905,31 @@ document.addEventListener("click", async (e) => {
     if (!card) return;
     markDirty(card);
 
-    // Sync list_title with the edited title so the overlay list stays up to date.
-    // - Projects (left): list_title is exactly the title.
-    // - Lehrgerueste (right): the title may carry a leading number prefix like
-    //   "000_kkkProject"; the displayed list_title should drop that prefix and
-    //   append the number on the right ("kkkProject 000"), matching existing
-    //   lehr entries like "P-Δ 000" / "Pagoda 000".
-    if (el.dataset.edit === "title") {
+    // Sync the frontmatter with the edited field so localStorage (and the
+    // post-save persist) always reflects the latest edits. Without this, a
+    // refresh would re-apply stale frontmatter and revert the visible text.
+    const field = el.dataset.edit;
+    if (field) {
       const fm = parseFm(card);
-      const nextTitle = el.textContent ?? "";
-      if (card.dataset.category === "lehrgerueste") {
-        const projectName = nextTitle.replace(/^\d+_/, "");
-        const nextListTitle = projectName ? `${projectName} 000` : "";
-        if (nextListTitle && fm.list_title !== nextListTitle) {
-          fm.list_title = nextListTitle;
-          card.dataset.frontmatter = JSON.stringify(fm);
+      const nextVal = el.textContent ?? "";
+
+      if (field === "title") {
+        fm.title = nextVal;
+        if (card.dataset.category === "lehrgerueste") {
+          const projectName = nextVal.replace(/^\d+_/, "");
+          fm.list_title = projectName ? `${projectName} 000` : "";
+        } else {
+          fm.list_title = nextVal;
         }
+      } else if (field === "year") {
+        const yr = parseInt(nextVal, 10);
+        if (!isNaN(yr)) fm.year = yr;
+        else fm.display_date = nextVal;
       } else {
-        if (nextTitle && fm.list_title !== nextTitle) {
-          fm.list_title = nextTitle;
-          card.dataset.frontmatter = JSON.stringify(fm);
-        }
+        fm[field] = nextVal;
       }
+
+      card.dataset.frontmatter = JSON.stringify(fm);
     }
 
     // Update the overlay menus in real time as the user edits.
