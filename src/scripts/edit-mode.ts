@@ -324,6 +324,9 @@ function exitEdit() {
   });
   // Drop cards that were deleted during this session.
   document.querySelectorAll<HTMLElement>('.project-card[data-to-delete="1"]').forEach((c) => c.remove());
+  // Rebuild the overlay menus so the editor landing page reflects the latest
+  // edits (and the correct lehrgerueste naming format) immediately.
+  updateOverlayListsFromDOM();
   // Reset the floating bar to its landing (edit) state.
   const bar = document.getElementById("edit-bar");
   const toggle = bar?.querySelector<HTMLElement>("#edit-toggle");
@@ -334,6 +337,55 @@ function exitEdit() {
   if (save) save.hidden = true;
   if (nl) nl.hidden = true;
   if (nr) nr.hidden = true;
+}
+
+/** Rebuild the PROJECTS / LEHRGERÜSTE overlay lists from the current DOM so
+    edits (new cards, renames, deletions) are visible immediately on the
+    editor's landing page without waiting for the Cloudflare rebuild. */
+function updateOverlayListsFromDOM() {
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-card"));
+  type Item = { slug: string; category: string; order: number; text: string; side: "left" | "right" };
+  const items: Item[] = [];
+  for (const card of cards) {
+    const fm = parseFm(card);
+    const slug = card.dataset.slug;
+    if (!slug) continue;
+    const category = (fm.category || card.dataset.category || "projects") as string;
+    items.push({
+      slug,
+      category,
+      order: Number.isFinite(Number(fm.order)) ? Number(fm.order) : 0,
+      text: String(fm.list_title ?? fm.title ?? ""),
+      side: category === "lehrgerueste" ? "right" : "left",
+    });
+  }
+
+  const projects = items.filter((i) => i.category === "projects").sort((a, b) => b.order - a.order);
+  const lehr = items.filter((i) => i.category === "lehrgerueste").sort((a, b) => a.order - b.order);
+
+  const buildNav = (list: Item[], side: "left" | "right") => {
+    const frag = document.createDocumentFragment();
+    for (const item of list) {
+      const a = document.createElement("a");
+      a.href = `/?open=${item.slug}&side=${side}`;
+      a.dataset.detailSlug = item.slug;
+      a.dataset.detailSide = side;
+      a.textContent = item.text;
+      frag.appendChild(a);
+    }
+    return frag;
+  };
+
+  const projectNav = document.querySelector("#projects-overlay nav");
+  if (projectNav) {
+    projectNav.innerHTML = "";
+    projectNav.appendChild(buildNav(projects, "left"));
+  }
+  const lehrNav = document.querySelector("#lehrgerueste-overlay nav");
+  if (lehrNav) {
+    lehrNav.innerHTML = "";
+    lehrNav.appendChild(buildNav(lehr, "right"));
+  }
 }
 
 // ---- Gallery edit: wrap images, X delete button, drag-drop reorder ---------
@@ -833,10 +885,16 @@ document.addEventListener("click", async (e) => {
     if (!card) return;
     markDirty(card);
 
-    // New projects use a default list_title. Keep it in sync with the title so
-    // the homepage list reflects the name the user typed instead of remaining
-    // "New Project 000" (which can look like cross-talk with a lehr entry).
-    if (card.dataset.isNew === "1" && el.dataset.edit === "title") {
+    // New projects use a default list_title. For the left column (projects),
+    // keep list_title in sync with the title so the list shows the edited name.
+    // For lehrgerueste, leave the default list_title alone so the number stays
+    // on the right like the existing lehr entries ("New Project 000" rather
+    // than "000 New Project").
+    if (
+      card.dataset.isNew === "1" &&
+      el.dataset.edit === "title" &&
+      card.dataset.category !== "lehrgerueste"
+    ) {
       const fm = parseFm(card);
       const nextTitle = el.textContent ?? "";
       if (nextTitle && fm.list_title !== nextTitle) {
@@ -844,6 +902,9 @@ document.addEventListener("click", async (e) => {
         card.dataset.frontmatter = JSON.stringify(fm);
       }
     }
+
+    // Update the overlay menus in real time as the user edits.
+    updateOverlayListsFromDOM();
 
     clearTimeout(persistTimer);
     persistTimer = window.setTimeout(persistOverrides, 400);
