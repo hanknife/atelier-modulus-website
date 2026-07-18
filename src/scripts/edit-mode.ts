@@ -96,7 +96,7 @@ function parseFm(el: HTMLElement): Fm {
 // (the user's own editing surface); the public site is untouched and is still
 // rebuilt from frontmatter. No red lines crossed — on the public site, text
 // remains frontmatter-driven; here we merely re-show what the user typed.
-const LS_KEY = "am_editor_overrides_v1";
+const LS_KEY = "am_editor_overrides_v2";
 
 function loadOverrides(): Record<string, any> {
   try {
