@@ -96,10 +96,6 @@ body.edit-mode .gallery-img-wrap.dragging {
 body.edit-mode .gallery-img-wrap.drag-over {
   outline: 2px dashed #111;
 }
-/* When selected (clicked) → show the X button, highlight border. */
-body.edit-mode .gallery-img-wrap.selected {
-  outline: 2px solid #111;
-}
 body.edit-mode .gallery-img-wrap img {
   display: block;
   max-width: 180px;
@@ -112,7 +108,7 @@ body.edit-mode .gallery-img-wrap.is-cover img {
   max-height: 165px;
 }
 
-/* X delete button — hidden by default, shown on .selected.
+/* X delete button — always visible on non-cover images in edit mode.
    Positioned at top-right INSIDE its parent wrapper. */
 .gallery-del-btn {
   position: absolute;
@@ -130,16 +126,11 @@ body.edit-mode .gallery-img-wrap.is-cover img {
   cursor: pointer;
   z-index: 10;
   user-select: none;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.10s, background 0.10s, color 0.10s;
+  transition: background 0.10s, color 0.10s;
 }
-/* Show only when the wrapper is .selected (user clicked the image). */
-body.edit-mode .gallery-img-wrap.selected > .gallery-del-btn,
-/* Always show on hover too as an extra affordance */
-body.edit-mode .gallery-img-wrap:hover > .gallery-del-btn {
-  opacity: 1;
-  pointer-events: auto;
+/* Cover has no X — but if somehow present, hide it. */
+body.edit-mode .gallery-img-wrap.is-cover > .gallery-del-btn {
+  display: none;
 }
 .gallery-del-btn:hover {
   background: #111;

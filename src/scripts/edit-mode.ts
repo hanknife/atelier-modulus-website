@@ -351,16 +351,31 @@ function createGalleryImgWrap(src: string, isCover = false): HTMLElement {
   return wrap;
 }
 
-/** Read current gallery image order from DOM back into frontmatter. */
+/** Read current gallery image order from DOM back into frontmatter.
+    Also syncs the card's cover thumbnail and carousel in real-time. */
 function syncGalleryFromDOM(card: HTMLElement) {
   const gallery = card.querySelector<HTMLElement>(".detail-gallery");
   if (!gallery) return;
   const wraps = gallery.querySelectorAll<HTMLImageElement>(".gallery-img-wrap img");
   const urls = Array.from(wraps).map((img) => img.src);
+  if (urls.length === 0) return;
+
   const fm = parseFm(card);
-  if (urls.length > 0) fm.cover_image = urls[0];
+  fm.cover_image = urls[0];
   fm.gallery = urls.slice(1); // everything after first
   card.dataset.frontmatter = JSON.stringify(fm);
+
+  // Real-time sync: update the card's visible cover image.
+  const cardImg = card.querySelector<HTMLImageElement>("img");
+  if (cardImg) cardImg.src = urls[0];
+
+  // Sync carousel data-images (used by the image viewer).
+  const carousel = card.querySelector<HTMLElement>(".project-carousel");
+  if (carousel) {
+    try {
+      carousel.dataset.images = JSON.stringify(urls);
+    } catch { /* ignore */ }
+  }
 }
 
 // ---- Drag-drop reorder -----------------------------------------------
@@ -671,18 +686,6 @@ document.addEventListener("click", async (e) => {
         card.style.display = "none";
         persistOverrides();
       }
-    }
-
-    // Click a gallery image wrapper → toggle .selected to show/hide X button.
-    // Don't trigger when clicking the X button itself.
-    if (
-      document.body.classList.contains(EDIT_MODE_CLASS) &&
-      t.closest(".gallery-img-wrap") &&
-      !t.matches(".gallery-del-btn")
-    ) {
-      const wrap = t.closest<HTMLElement>(".gallery-img-wrap")!;
-      // Toggle this one; optionally deselect others (single-select feel).
-      wrap.classList.toggle("selected");
     }
 
     // Click the ✕ delete button on a gallery image wrapper.
