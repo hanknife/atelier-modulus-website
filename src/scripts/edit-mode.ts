@@ -456,7 +456,7 @@ function newProject(side: "left" | "right") {
   const category = side === "left" ? "projects" : "lehrgerueste";
   const slug = "new-" + Date.now();
   const fm: Fm = {
-    title: "000_New Project", list_title: "", year: new Date().getFullYear(), location: "",
+    title: "000_New Project", list_title: "000 New Project", year: new Date().getFullYear(), location: "",
     type: "", status: "Draft", collaborators: [], description_cn: "", description_en: "",
     cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg", gallery: [], tags: [], category,
     display_date: "", featured: false, order: 999, __body: "",
@@ -484,12 +484,19 @@ function newProject(side: "left" | "right") {
       </figcaption>
     </figure>
     <div class="edit-controls">
-      <label class="edit-replace-img">换封面图<input type="file" accept="image/*" data-role="replace-image" hidden /></label>
       <button type="button" data-role="delete-card">删除</button>
     </div>`;
   const cols = document.querySelectorAll<HTMLElement>(".project-column");
   const col = cols[side === "left" ? 0 : 1];
-  col?.prepend(card); // 新项目插入到列的最顶部
+  if (col) {
+    // Match the public site order: left column descending (newest on top),
+    // right column ascending (newest at the bottom).
+    if (side === "left") {
+      col.prepend(card);
+    } else {
+      col.append(card);
+    }
+  }
   makeCardEditable(card);
   markDirty(card); // new cards always need saving
   persistOverrides();

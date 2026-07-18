@@ -17,7 +17,9 @@ const projects = (await getCollection("projects"))
 const leftProjects = projects
   .filter((p) => p.data.category === "projects")
   .sort((a, b) => b.data.order - a.data.order);
-const rightProjects = projects.filter((p) => p.data.category === "lehrgerueste");
+const rightProjects = projects
+  .filter((p) => p.data.category === "lehrgerueste")
+  .sort((a, b) => a.data.order - b.data.order);
 ---
 
 <BaseLayout title="Atelier Modulus — Editor">
