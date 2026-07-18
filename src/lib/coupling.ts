@@ -1,10 +1,7 @@
 import { getCollection } from "astro:content";
-import sizeOf from "image-size";
 
 export interface CouplingImageMeta {
   image: string;
-  width: number;
-  height: number;
   slug: string;
   side: "left" | "right";
 }
@@ -30,23 +27,11 @@ const manualImageOwners: Record<string, string> = {
 };
 
 /**
- * Build display metadata for a list of coupling board images.
- * Each `image` is now an R2 URL (images were migrated out of the repo into
- * the R2 bucket). Dimensions are read from the remote URL at build time; if
- * that fails we fall back to 1×1 so the build never breaks.
+ * Resolve each coupling-board image to its owning project (slug + side) so a
+ * tile can open the correct detail overlay. Image dimensions are NOT needed
+ * here — the board's masonry sizes each tile from its rendered height at
+ * runtime (see CouplingBoard.astro).
  */
-async function readDims(url: string): Promise<{ width: number; height: number }> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return { width: 1, height: 1 };
-    const buf = new Uint8Array(await res.arrayBuffer());
-    const d = sizeOf(buf);
-    return { width: d.width ?? 1, height: d.height ?? 1 };
-  } catch {
-    return { width: 1, height: 1 };
-  }
-}
-
 export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[]> {
   const projects = (await getCollection("projects")).sort(
     (a, b) => a.data.order - b.data.order
@@ -55,15 +40,12 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
     projects.map((p) => [p.id.replace(/\.mdx?$/, ""), p])
   );
 
-  return Promise.all(
-    images.map(async (image) => {
-      const { width, height } = await readDims(image);
-      const ownerSlug = manualImageOwners[image];
-      const owner = ownerSlug ? bySlug[ownerSlug] : undefined;
-      const slug = owner ? owner.id.replace(/\.mdx?$/, "") : "";
-      const side: "left" | "right" =
-        owner && owner.data.category === "lehrgerueste" ? "right" : "left";
-      return { image, width, height, slug, side };
-    })
-  );
+  return images.map((image) => {
+    const ownerSlug = manualImageOwners[image];
+    const owner = ownerSlug ? bySlug[ownerSlug] : undefined;
+    const slug = owner ? owner.id.replace(/\.mdx?$/, "") : "";
+    const side: "left" | "right" =
+      owner && owner.data.category === "lehrgerueste" ? "right" : "left";
+    return { image, slug, side };
+  });
 }

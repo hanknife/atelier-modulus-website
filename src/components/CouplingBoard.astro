@@ -18,7 +18,7 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
 ---
 
 <section class={boardClass} aria-label="Coupling image board">
-  {imageMeta.map(({ image, width, height, slug, side }, index) => {
+  {imageMeta.map(({ image, slug, side }, index) => {
     const size = SIZE_PATTERN[index % SIZE_PATTERN.length];
     return (
       <figure

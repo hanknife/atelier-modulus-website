@@ -50,14 +50,6 @@ function slugFromPath(path: string): string {
   return path.replace(/^src\/content\/projects\//, "").replace(/\.mdx?$/, "");
 }
 
-function coverFromContent(content: string): string {
-  const fm = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!fm) return "";
-  const line = fm[1].match(/cover_image:\s*(.+)/);
-  if (!line) return "";
-  return line[1].trim().replace(/^["']|["']$/g, "");
-}
-
 async function writeLiveOverride(env: Env, slug: string, coverImage: string) {
   if (!env.EDITOR_BUCKET) return;
   try {
@@ -133,7 +125,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         "X-GitHub-Api-Version": "2022-11-28",
       };
 
-      const items: Array<{ action: string; path: string; content?: string }> = body.items ?? [];
+      const items: Array<{ action: string; path: string; content?: string; cover?: string }> = body.items ?? [];
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
       // A whole-save retry handles the rare case where another save-all moved
@@ -174,7 +166,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
               const blobData = (await blobRes.json()) as { sha: string };
               treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: blobData.sha });
               const slug = slugFromPath(item.path);
-              liveOverrides.push({ slug, cover: coverFromContent(item.content) });
+              liveOverrides.push({ slug, cover: item.cover ?? "" });
             } else {
               results.push({ path: item.path, error: "invalid item" });
             }

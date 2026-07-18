@@ -340,7 +340,7 @@ async function save() {
   // The server processes them sequentially so GitHub SHA conflicts are
   // impossible — no retries needed, no 409s, and only 1 network round-trip
   // from the client (vs. N round-trips before).
-  const items: Array<{ action: string; path: string; content?: string }> = [];
+  const items: Array<{ action: string; path: string; content?: string; cover?: string }> = [];
   for (const card of cards) {
     const path = card.dataset.path ?? "?";
     if (card.dataset.toDelete === "1") {
@@ -359,7 +359,7 @@ async function save() {
           fm[field] = val;
         }
       });
-      items.push({ action: "save", path, content: serializeFm(fm) });
+      items.push({ action: "save", path, content: serializeFm(fm), cover: fm.cover_image });
     }
   }
 
