@@ -108,33 +108,34 @@ body.edit-mode .gallery-img-wrap.is-cover img {
   max-height: 165px;
 }
 
-/* X delete button — always visible on non-cover images in edit mode.
-   Positioned at top-right INSIDE its parent wrapper. */
+/* X delete button — centered on each non-cover image in edit mode.
+   No circle, just a clean × that sits dead-center of the image. */
 .gallery-del-btn {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1.5px solid #111;
-  background: #fff;
-  color: #111;
-  font-size: 14px;
-  line-height: 18px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  padding: 4px 8px;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1;
   text-align: center;
   cursor: pointer;
   z-index: 10;
   user-select: none;
-  transition: background 0.10s, color 0.10s;
+  transition: background 0.10s;
 }
-/* Cover has no X — but if somehow present, hide it. */
+/* Cover has no X — hide if present. */
 body.edit-mode .gallery-img-wrap.is-cover > .gallery-del-btn {
   display: none;
 }
 .gallery-del-btn:hover {
-  background: #111;
-  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
 }
 .gallery-del-btn::before {
   content: "\00D7"; /* clean × */

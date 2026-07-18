@@ -352,7 +352,7 @@ function createGalleryImgWrap(src: string, isCover = false): HTMLElement {
 }
 
 /** Read current gallery image order from DOM back into frontmatter.
-    Also syncs the card's cover thumbnail and carousel in real-time. */
+    Also syncs cover image to ALL cards sharing the same slug (overlay + main page). */
 function syncGalleryFromDOM(card: HTMLElement) {
   const gallery = card.querySelector<HTMLElement>(".detail-gallery");
   if (!gallery) return;
@@ -365,7 +365,7 @@ function syncGalleryFromDOM(card: HTMLElement) {
   fm.gallery = urls.slice(1); // everything after first
   card.dataset.frontmatter = JSON.stringify(fm);
 
-  // Real-time sync: update the card's visible cover image.
+  // Update THIS card's visible cover image.
   const cardImg = card.querySelector<HTMLImageElement>("img");
   if (cardImg) cardImg.src = urls[0];
 
@@ -376,6 +376,22 @@ function syncGalleryFromDOM(card: HTMLElement) {
       carousel.dataset.images = JSON.stringify(urls);
     } catch { /* ignore */ }
   }
+
+  // Cross-sync: find ALL other .project-card elements with the same data-slug
+  // (e.g. the EditorCard on the main page when editing inside an overlay)
+  // and update their cover + frontmatter too.
+  const slug = card.dataset.slug;
+  if (!slug) return;
+  document.querySelectorAll<HTMLElement>(".project-card").forEach((other) => {
+    if (other === card || other.dataset.slug !== slug) return;
+    other.dataset.frontmatter = JSON.stringify(fm);
+    const otherImg = other.querySelector<HTMLImageElement>("img");
+    if (otherImg) otherImg.src = urls[0];
+    const otherCarousel = other.querySelector<HTMLElement>(".project-carousel");
+    if (otherCarousel) {
+      try { otherCarousel.dataset.images = JSON.stringify(urls); } catch { /* ignore */ }
+    }
+  });
 }
 
 // ---- Drag-drop reorder -----------------------------------------------
