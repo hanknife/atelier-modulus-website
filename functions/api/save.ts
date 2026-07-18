@@ -138,34 +138,57 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
 
       if (body.action === "save") {
         const path = body.path;
-        const sha = await getSha(api, path, headers);
-        const r = await fetch(`${api}/${path}`, {
-          method: "PUT",
-          headers,
-          body: JSON.stringify({
-            message: `update ${path}`,
-            content: b64encode(body.content),
-            ...(sha ? { sha } : {}),
-          }),
-        });
-        if (!r.ok) return json({ error: await r.text() }, r.status);
-        const slug = slugFromPath(path);
-        await writeLiveOverride(env, slug, coverFromContent(body.content));
-        return json({ ok: true });
+        // Retry on 409 (SHA conflict): another request may have just written
+        // this file — fetch the fresh SHA and try again.
+        let lastError: string | null = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const sha = await getSha(api, path, headers);
+          const r = await fetch(`${api}/${path}`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({
+              message: `update ${path}`,
+              content: b64encode(body.content),
+              ...(sha ? { sha } : {}),
+            }),
+          });
+          if (r.ok) {
+            const slug = slugFromPath(path);
+            await writeLiveOverride(env, slug, coverFromContent(body.content));
+            return json({ ok: true });
+          }
+          // 409 = SHA mismatch — worth one retry with a fresh sha
+          if (r.status !== 409) {
+            lastError = await r.text();
+            break;
+          }
+          lastError = await r.text();
+        }
+        return json({ error: lastError ?? "save failed" }, 409);
       }
 
       if (body.action === "delete") {
         const path = body.path;
-        const sha = await getSha(api, path, headers);
-        if (!sha) return json({ ok: true });
-        const r = await fetch(`${api}/${path}`, {
-          method: "DELETE",
-          headers,
-          body: JSON.stringify({ message: `delete ${path}`, sha }),
-        });
-        if (!r.ok) return json({ error: await r.text() }, r.status);
-        await deleteLiveOverride(env, slugFromPath(path));
-        return json({ ok: true });
+        let lastError: string | null = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const sha = await getSha(api, path, headers);
+          if (!sha) return json({ ok: true });
+          const r = await fetch(`${api}/${path}`, {
+            method: "DELETE",
+            headers,
+            body: JSON.stringify({ message: `delete ${path}`, sha }),
+          });
+          if (r.ok) {
+            await deleteLiveOverride(env, slugFromPath(path));
+            return json({ ok: true });
+          }
+          if (r.status !== 409) {
+            lastError = await r.text();
+            break;
+          }
+          lastError = await r.text();
+        }
+        return json({ error: lastError ?? "delete failed" }, 409);
       }
 
     return json({ error: "unknown action" }, 400);
