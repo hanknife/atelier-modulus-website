@@ -606,6 +606,9 @@ function newProject(side: "left" | "right") {
   makeCardEditable(card);
   markDirty(card); // new cards always need saving
   persistOverrides();
+  // Update the overlay menus so the new project is visible immediately,
+  // whether the user opens the menu before or after editing the title.
+  updateOverlayListsFromDOM();
 }
 
 async function handleReplace(card: HTMLElement, file: File) {
