@@ -154,21 +154,16 @@ function applyOverrides() {
       }
     }
     if (s.toDelete === "1") card.style.display = "none";
-    // Restore gallery images from frontmatter (handles newly added ones).
+    // Restore gallery images from frontmatter (handles added/removed/reordered).
     const gallery = card.querySelector<HTMLElement>(".detail-gallery");
     if (gallery && Array.isArray(fm.gallery)) {
-      const existingImgs = gallery.querySelectorAll<HTMLImageElement>("img");
-      // Keep the first img (cover), replace/add rest.
-      for (let i = existingImgs.length - 1; i >= 1; i--) {
-        existingImgs[i].remove(); // remove old non-cover images
-      }
-      for (const url of fm.gallery) {
-        const gImg = document.createElement("img");
-        gImg.src = url;
-        gImg.alt = "";
-        gImg.loading = "lazy";
-        gallery.appendChild(gImg);
-      }
+      gallery.innerHTML = ""; // clear and rebuild from fm
+      const allImages = [fm.cover_image, ...fm.gallery];
+      allImages.forEach((url, i) => {
+        const wrap = createGalleryImgWrap(url, i === 0);
+        gallery.appendChild(wrap);
+      });
+      initGalleryDragDrop(gallery, card);
     }
   });
 }
@@ -294,6 +289,7 @@ function enterEdit() {
   if (!pass) return;
   document.body.classList.add(EDIT_MODE_CLASS);
   setEditable(true);
+  setupGalleryEdit(); // wrap gallery images, add X buttons, enable drag-drop
   const bar = document.getElementById("edit-bar");
   const toggle = bar?.querySelector<HTMLElement>("#edit-toggle");
   const save = bar?.querySelector<HTMLElement>("#edit-save");
@@ -303,6 +299,115 @@ function enterEdit() {
   if (save) save.hidden = false;
   if (nl) nl.hidden = false;
   if (nr) nr.hidden = false;
+}
+
+// ---- Gallery edit: wrap images, X delete button, drag-drop reorder ---------
+// Called once when entering edit mode. Wraps every <img> in .detail-gallery
+// inside a .gallery-img-wrap div, adds ✕ delete buttons on non-cover images,
+// and sets up HTML5 drag-and-drop for reordering.
+function setupGalleryEdit() {
+  document.querySelectorAll<HTMLElement>(".detail-gallery").forEach((gallery) => {
+    const card = gallery.closest<HTMLElement>(".project-card");
+    if (!card) return;
+
+    // Wrap each existing bare <img> in a .gallery-img-wrap.
+    const imgs = Array.from(gallery.querySelectorAll<HTMLImageElement>("img"));
+    imgs.forEach((img, i) => {
+      if (img.parentElement?.classList.contains("gallery-img-wrap")) return; // already wrapped
+      const wrap = document.createElement("div");
+      wrap.className = "gallery-img-wrap" + (i === 0 ? " is-cover" : "");
+      wrap.draggable = true;
+      img.before(wrap);
+      wrap.appendChild(img);
+      // X delete button — skip cover (index 0).
+      if (i > 0) {
+        const btn = document.createElement("span");
+        btn.className = "gallery-del-btn";
+        wrap.appendChild(btn);
+      }
+    });
+
+    initGalleryDragDrop(gallery, card);
+  });
+}
+
+/** Create a single wrapped image element for appending to a gallery. */
+function createGalleryImgWrap(src: string, isCover = false): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "gallery-img-wrap" + (isCover ? " is-cover" : "");
+  wrap.draggable = true;
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = "";
+  img.loading = "lazy";
+  wrap.appendChild(img);
+  if (!isCover) {
+    const btn = document.createElement("span");
+    btn.className = "gallery-del-btn";
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
+/** Read current gallery image order from DOM back into frontmatter. */
+function syncGalleryFromDOM(card: HTMLElement) {
+  const gallery = card.querySelector<HTMLElement>(".detail-gallery");
+  if (!gallery) return;
+  const wraps = gallery.querySelectorAll<HTMLImageElement>(".gallery-img-wrap img");
+  const urls = Array.from(wraps).map((img) => img.src);
+  const fm = parseFm(card);
+  if (urls.length > 0) fm.cover_image = urls[0];
+  fm.gallery = urls.slice(1); // everything after first
+  card.dataset.frontmatter = JSON.stringify(fm);
+}
+
+// ---- Drag-drop reorder -----------------------------------------------
+function initGalleryDragDrop(gallery: HTMLElement, card: HTMLElement) {
+  let dragSrc: HTMLElement | null = null;
+
+  gallery.addEventListener("dragstart", (e) => {
+    dragSrc = (e.target as HTMLElement).closest<HTMLElement>(".gallery-img-wrap") ?? null;
+    if (dragSrc) dragSrc.classList.add("dragging");
+    e.dataTransfer!.effectAllowed = "move";
+  });
+
+  gallery.addEventListener("dragend", () => {
+    if (dragSrc) dragSrc.classList.remove("dragging");
+    dragSrc = null;
+    gallery.querySelectorAll<HTMLElement>(".gallery-img-wrap").forEach((el) => el.classList.remove("drag-over"));
+    syncGalleryFromDOM(card);
+    persistOverrides();
+  });
+
+  gallery.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = "move";
+    const target = (e.target as HTMLElement).closest<HTMLElement>(".gallery-img-wrap");
+    if (target && target !== dragSrc) {
+      target.classList.add("drag-over");
+    }
+  });
+
+  gallery.addEventListener("dragleave", (e) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>(".gallery-img-wrap");
+    if (target) target.classList.remove("drag-over");
+  });
+
+  gallery.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const target = (e.target as HTMLElement).closest<HTMLElement>(".gallery-img-wrap");
+    if (!target || !dragSrc || target === dragSrc) return;
+    target.classList.remove("drag-over");
+
+    // Insert before or after depending on pointer position.
+    const rect = target.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    if ((e as DragEvent).clientX < midX) {
+      target.before(dragSrc);
+    } else {
+      target.after(dragSrc);
+    }
+  });
 }
 
 function newProject(side: "left" | "right") {
@@ -406,36 +511,35 @@ async function handleReplace(card: HTMLElement, file: File) {
 async function handleGalleryAdd(card: HTMLElement, files: File[]) {
   const gallery = card.querySelector<HTMLElement>(".detail-gallery");
   if (!gallery) return;
-  const fm = parseFm(card);
 
-  // 1) Instant local preview — append one <img> per file immediately.
-  const previews: { img: HTMLImageElement; blobUrl: string }[] = [];
+  // 1) Instant local preview — append one wrapped <img> per file immediately.
   for (const file of files) {
     const url = URL.createObjectURL(file);
-    const img = document.createElement("img");
-    img.src = url;
-    img.alt = "";
-    img.loading = "lazy";
-    gallery.appendChild(img);
-    previews.push({ img, blobUrl: url });
+    const wrap = createGalleryImgWrap(url, false);
+    gallery.appendChild(wrap);
+    // Re-init drag-drop on the new element (it already has draggable=true).
   }
 
   // 2) Upload each image in background; swap blob → R2 URL on success.
-  for (let i = 0; i < previews.length; i++) {
-    const { img, blobUrl } = previews[i];
+  const wraps = Array.from(gallery.querySelectorAll<HTMLElement>(".gallery-img-wrap"))
+    .slice(-files.length); // the ones we just added
+  for (let i = 0; i < wraps.length; i++) {
+    const wrap = wraps[i];
+    const img = wrap.querySelector<HTMLImageElement>("img")!;
+    const blobUrl = img.src;
     try {
       const r2Url = await uploadImage(files[i]);
       img.src = r2Url;
       URL.revokeObjectURL(blobUrl);
-      fm.gallery.push(r2Url); // append to frontmatter
+      syncGalleryFromDOM(card);
     } catch (e) {
-      img.remove(); // failed upload → remove preview
+      wrap.remove(); // failed upload → remove wrapper
       URL.revokeObjectURL(blobUrl);
+      syncGalleryFromDOM(card);
       await showAlert("图纸上传失败：" + (e as Error).message);
     }
   }
 
-  card.dataset.frontmatter = JSON.stringify(fm);
   persistOverrides();
 }
 
@@ -562,22 +666,14 @@ document.addEventListener("click", async (e) => {
         persistOverrides();
       }
     }
-    // Click a gallery image in edit mode → remove it.
-    if (
-      document.body.classList.contains(EDIT_MODE_CLASS) &&
-      t.matches(".detail-gallery img") &&
-      !t.matches(".detail-gallery img:first-child")
-    ) {
-      const gallery = t.parentElement;
-      if (!gallery || !(t instanceof HTMLImageElement)) return;
-      const url = t.src;
-      t.remove();
-      const card = gallery.closest<HTMLElement>(".project-card");
+    // Click the ✕ delete button on a gallery image wrapper.
+    if (t.matches(".gallery-del-btn")) {
+      const wrap = t.parentElement; // .gallery-img-wrap
+      if (!wrap) return;
+      wrap.remove();
+      const card = wrap.closest<HTMLElement>(".project-card");
       if (card) {
-        const fm = parseFm(card);
-        fm.gallery = (fm.gallery as string[]).filter((u: string) => u !== url);
-        card.dataset.frontmatter = JSON.stringify(fm);
-        URL.revokeObjectURL(url); // clean up blob URLs from pending uploads
+        syncGalleryFromDOM(card);
         persistOverrides();
       }
     }

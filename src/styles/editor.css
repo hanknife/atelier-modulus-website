@@ -38,22 +38,15 @@ body.edit-mode [data-edit] {
 body.edit-mode [data-edit]:focus {
   background: rgba(0, 0, 0, 0.06);
 }
-/* Gallery images: clickable in edit mode (except first = cover). */
-body.edit-mode .detail-gallery img:not(:first-child) {
-  cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.12s;
-}
-body.edit-mode .detail-gallery img:not(:first-child):hover {
-  opacity: 1;
-  outline: 2px solid #111;
-}
+
+/* --- Edit control buttons (uniform monochrome bordered style) --- */
 .edit-controls {
   margin-top: 8px;
   display: flex;
   gap: 8px;
 }
 .edit-controls .edit-replace-img,
+.edit-controls .edit-add-gallery,
 .edit-controls button {
   cursor: pointer;
   font: inherit;
@@ -65,11 +58,80 @@ body.edit-mode .detail-gallery img:not(:first-child):hover {
   border-radius: 2px;
   transition: background 0.12s, color 0.12s;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 .edit-controls .edit-replace-img:hover,
+.edit-controls .edit-add-gallery:hover,
 .edit-controls button:hover {
   background: #111;
   color: #fff;
+}
+
+/* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
+body.edit-mode .detail-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+body.edit-mode .detail-gallery img {
+  position: relative;
+  display: block;
+}
+/* Wrap each gallery image in a position:relative container for the X button.
+   These are injected by edit-mode.ts on enterEdit(). */
+body.edit-mode .gallery-img-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: grab;
+  transition: opacity 0.15s;
+}
+body.edit-mode .gallery-img-wrap:active {
+  cursor: grabbing;
+}
+body.edit-mode .gallery-img-wrap.dragging {
+  opacity: 0.5;
+}
+body.edit-mode .gallery-img-wrap.drag-over {
+  outline: 2px dashed #111;
+  outline-offset: 2px;
+}
+body.edit-mode .gallery-img-wrap img {
+  display: block;
+  max-width: 200px;
+  max-height: 160px;
+  object-fit: contain;
+}
+/* Cover (first image): no X button, slightly different hint. */
+body.edit-mode .gallery-img-wrap.is-cover img {
+  max-width: 240px;
+  max-height: 180px;
+}
+/* X delete button — top-right corner of each non-cover image. */
+.gallery-del-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #111;
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+  line-height: 16px;
+  text-align: center;
+  cursor: pointer;
+  z-index: 2;
+  user-select: none;
+  transition: background 0.10s, color 0.10s;
+}
+.gallery-del-btn:hover {
+  background: #111;
+  color: #fff;
+}
+.gallery-del-btn::before {
+  content: "\00D7"; /* multiplication sign = clean ✕ */
 }
 
 /* === Custom confirmation dialog (monochrome white) === */
