@@ -270,15 +270,53 @@ function newProject(side: "left" | "right") {
 }
 
 async function handleReplace(card: HTMLElement, file: File) {
-  try {
-    const url = await uploadImage(file);
+  const img = card.querySelector<HTMLImageElement>("img");
+  const carousel = card.querySelector<HTMLElement>(".project-carousel");
+  // The cover that was on the card before this swap — used to roll back on failure.
+  const originalCover = parseFm(card).cover_image;
+
+  // 1) Instant local preview. createObjectURL is synchronous, so the cover
+  //    appears the moment the file is picked — no waiting on the network.
+  //    We only touch the live DOM here; frontmatter keeps the original URL so a
+  //    mid-upload reload can never strand a dead blob: URL in storage.
+  const previewUrl = URL.createObjectURL(file);
+  if (img) img.src = previewUrl;
+  if (carousel) {
+    try {
+      const arr = JSON.parse(carousel.dataset.images || "[]");
+      arr[0] = previewUrl; // keep the carousel in sync so looping still starts on the new cover
+      carousel.dataset.images = JSON.stringify(arr);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Swap the temporary preview for a final URL everywhere it shows up.
+  const swap = (url: any) => {
+    if (img && img.src === previewUrl) img.src = url;
+    if (carousel) {
+      try {
+        const arr = JSON.parse(carousel.dataset.images || "[]");
+        if (arr[0] === previewUrl) arr[0] = url;
+        carousel.dataset.images = JSON.stringify(arr);
+      } catch {
+        /* ignore */
+      }
+    }
     const fm = parseFm(card);
     fm.cover_image = url;
     card.dataset.frontmatter = JSON.stringify(fm);
-    const img = card.querySelector("img");
-    if (img) img.src = url;
+  };
+
+  // 2) Upload in the background; swap to the real R2 URL when it lands.
+  try {
+    const url = await uploadImage(file);
+    URL.revokeObjectURL(previewUrl);
+    swap(url);
     persistOverrides();
   } catch (e) {
+    URL.revokeObjectURL(previewUrl);
+    swap(originalCover);
     alert("封面图上传失败：" + (e as Error).message);
   }
 }
