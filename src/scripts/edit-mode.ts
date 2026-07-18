@@ -310,6 +310,32 @@ function enterEdit() {
   if (nr) nr.hidden = false;
 }
 
+/** Leave edit mode and return to the read-only landing view of the editor.
+    The current DOM already holds the saved values, so the landing page shows
+    the latest edits immediately (no reload needed). */
+function exitEdit() {
+  document.body.classList.remove(EDIT_MODE_CLASS);
+  setEditable(false);
+  // Unwrap gallery images back to their original <img> markup so the landing
+  // view and detail overlays render in their normal (non-edit) layout.
+  document.querySelectorAll<HTMLElement>(".detail-gallery .gallery-img-wrap").forEach((wrap) => {
+    const img = wrap.querySelector("img");
+    if (img) wrap.replaceWith(img);
+  });
+  // Drop cards that were deleted during this session.
+  document.querySelectorAll<HTMLElement>('.project-card[data-to-delete="1"]').forEach((c) => c.remove());
+  // Reset the floating bar to its landing (edit) state.
+  const bar = document.getElementById("edit-bar");
+  const toggle = bar?.querySelector<HTMLElement>("#edit-toggle");
+  const save = bar?.querySelector<HTMLElement>("#edit-save");
+  const nl = bar?.querySelector<HTMLElement>("#edit-new-left");
+  const nr = bar?.querySelector<HTMLElement>("#edit-new-right");
+  if (toggle) toggle.textContent = "编辑";
+  if (save) save.hidden = true;
+  if (nl) nl.hidden = true;
+  if (nr) nr.hidden = true;
+}
+
 // ---- Gallery edit: wrap images, X delete button, drag-drop reorder ---------
 // Called once when entering edit mode. Wraps every <img> in .detail-gallery
 // inside a .gallery-img-wrap div, adds ✕ delete buttons on non-cover images,
@@ -703,9 +729,12 @@ async function save() {
   });
   done();
   await showAlert(
-    "已保存 — Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
+    "已保存 — 此页面的编辑后预览已更新，Cloudflare 正在重新构建（约 1–2 分钟）。\n" +
       "构建完成后刷新本页，主站和编辑器里就能看到更新。"
   );
+  // Return to the editor's landing view (read-only) so the page no longer
+  // looks like the in-edit state. The DOM already holds the latest edits.
+  exitEdit();
 }
 
 function buildUI() {
