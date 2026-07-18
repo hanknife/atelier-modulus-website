@@ -69,7 +69,13 @@ async function uploadImage(file: File): Promise<string> {
   const res = await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "upload", filename: file.name, data: b64, passcode: getPass() }),
+    body: JSON.stringify({
+      action: "upload",
+      filename: file.name,
+      data: b64,
+      contentType: file.type || "image/jpeg",
+      passcode: getPass(),
+    }),
   });
   const j = (await res.json()) as { url?: string; error?: string };
   if (!j.url) throw new Error(j.error || "upload failed");
