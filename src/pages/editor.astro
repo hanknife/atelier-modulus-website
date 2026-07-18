@@ -1,0 +1,38 @@
+---
+// Standalone in-page editor route. Uses the same BaseLayout shell as the public
+// site (so the user edits a faithful copy of the design) but renders editable
+// cards via EditorCard. The editor script and styles are loaded ONLY here, so
+// the public site (index.astro, ProjectCard.astro, global.css, BaseLayout.astro)
+// is never touched.
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import EditorCard from "../components/EditorCard.astro";
+import ProjectDetailOverlays from "../components/ProjectDetailOverlays.astro";
+import "../styles/editor.css";
+
+const projects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order);
+
+// Left column: projects, descending by order. Right column: lehrgerueste, ascending.
+const leftProjects = projects
+  .filter((p) => p.data.category === "projects")
+  .sort((a, b) => b.data.order - a.data.order);
+const rightProjects = projects.filter((p) => p.data.category === "lehrgerueste");
+---
+
+<BaseLayout title="Atelier Modulus — Editor">
+  <section class="project-split home-index" aria-label="Project index (editable)">
+    <div class="project-column" aria-label="Left project column">
+      {leftProjects.map((project) => <EditorCard project={project} side="left" />)}
+    </div>
+    <div class="project-column" aria-label="Right project column">
+      {rightProjects.map((project) => <EditorCard project={project} side="right" />)}
+    </div>
+  </section>
+
+  <ProjectDetailOverlays />
+
+  <script>
+    import "../scripts/edit-mode.ts";
+  </script>
+</BaseLayout>

@@ -1,0 +1,46 @@
+/* === In-page editor (WYSIWYG) styles — only loaded on the /editor route.
+   Kept out of global.css so the public site is untouched. These rules only
+   activate under body.edit-mode or the floating #edit-bar, which never appear
+   on the public site. === */
+#edit-bar {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+}
+#edit-bar button {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  background: var(--mono, #fff);
+  color: #111;
+  cursor: pointer;
+  border-radius: 2px;
+}
+#edit-bar button:hover {
+  background: #111;
+  color: #fff;
+}
+body.edit-mode [data-edit] {
+  outline: 1px dashed #c8862b;
+  outline-offset: 2px;
+  cursor: text;
+}
+body.edit-mode [data-edit]:focus {
+  outline-color: #e0972c;
+  background: rgba(232, 151, 44, 0.08);
+}
+.edit-controls {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+}
+.edit-controls .edit-replace-img,
+.edit-controls button {
+  cursor: pointer;
+  text-decoration: underline;
+}
