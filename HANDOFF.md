@@ -94,7 +94,7 @@
   `black-room`(022)、`coupling-studies-02`+`computing-hut-02/03`(024)、`nautilus`(030)、
   `the-world-we-live-in-000`、右侧 `pagoda-000`(lehr)、`the-world-we-live-in-000`(lehr)、`archive-pavilion`(lehr) 等。
 - 注意：新增测试项目后，记得在「当前状态」里登记其 slug、`title`、`list_title`、左右归属，便于后续会话核对。
-- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，当前 file_id `fCqidVvbsRqN`，8225 字节）与本仓库版于本会话核对为一致（size 相同，且本文件在末次编辑 `132c7cb` 后已上传）。双向同步协议见第 9 节。
+- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，file_id `fCqidVvbsRqN`）是本文件的跨对话副本，按第 9 节协议与仓库保持双向同步；本会话已执行同步（仓库 push + 共享盘 overwrite 上传），三者（仓库工作树 / GitHub remote / tdrive）一致。
 
 ---
 
