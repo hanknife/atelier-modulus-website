@@ -11,11 +11,14 @@
 |---|---|
 | 仓库路径（沙箱） | `/workspace/atelier-modulus-website` |
 | GitHub | `hanknife/atelier-modulus-website`（main 分支） |
-| 技术栈 | Astro 静态站点 + pnpm + Cloudflare Pages 自动部署 |
+| 技术栈 | Astro 5 静态网站 + pnpm + Cloudflare Pages 自动部署 |
 | 字体 | IBM Plex Mono（self-host，**不可替换**） |
+| 图片存储 | Cloudflare R2 桶（`EDITOR_BUCKET`），公开访问通过 `R2_PUBLIC_URL`（r2.dev） |
 | 工作流 | 改代码 → commit → push → Cloudflare 自动部署（约 1–2 分钟） |
 | 编辑页路由 | `/editor`（独立的站内编辑器，加载 `src/scripts/edit-mode.ts`） |
 | 公共站点 | `src/pages/index.astro` + `src/layouts/BaseLayout.astro` + `src/components/ProjectCard.astro` |
+| 后端 API | `functions/api/save.ts`（GitHub Git Data API + R2 删除） |
+| 编辑密码 | 环境变量 `EDIT_PASSCODE`（Cloudflare Pages 环境变量） |
 
 **推送方式**：仓库默认 remote 是只读 connector token（`oauth2:ghu_...`）。真正 push 时需临时换成用户的 PAT（`ghp_...`），push 完立即恢复只读 remote。
 
@@ -26,7 +29,7 @@
 1. Overlay 滑入动画、Close 按钮位置、导航栏文字**永远不动**。
 2. `global.css` / `ProjectCard.astro` **只追加不重写**。
 3. 显示文字由 frontmatter 的 `list_title` 决定，**禁止运行时格式化**（允许在保存/编辑时改写 frontmatter 里的 `list_title`，但渲染显示时直接用 `list_title`，不做拼接）。
-4. 左栏 projects 降序，右栏 lehrgerueste 升序（指主页卡片列顺序；**overlay 菜单**另有排序规则，见第 5 节）。
+4. 左栏 projects 降序，右栏 lehrgerueste 升序（指**主页卡片列**顺序；**overlay 菜单**另有排序规则，见第 5 节）。
 5. 改高危文件（`BaseLayout.astro` / `index.astro` / `global.css`）前，**必须先列出改动清单让用户确认**。
 
 ---
@@ -42,8 +45,19 @@
 | `updateOverlayListsFromDOM()` | 编辑器里实时重建左右 overlay 菜单的函数；从 `.project-column .project-card` 读取 `list_title` 并按规则排序 |
 | `localStorage` key | 当前 `am_editor_overrides_v4`，保存未提交的本地编辑；换版本号即可清空脏缓存 |
 | 保存流程 | `/api/save`（Cloudflare Function）→ 写回 GitHub（PAT） |
+| 画廊/图片 | 编辑态下用 `setupGalleryEdit()` 包裹 `.detail-gallery` 图片，支持拖拽排序、✕ 删除、跨实例同步 |
+| Dirty Tracking | 修改后设 `data-dirty="1"`；`save()` 只提交 dirty 卡片，避免 Cloudflare 50 子请求超限 |
 
 **重要**：编辑器打开时会用 JS 重建菜单（基于 DOM），公共站点只用服务端渲染的菜单。两者数据都来自 content 文件 + frontmatter，所以只要 content 文件正确，两者最终一致。编辑器可能「看起来」比公共站点更新，是因为 JS 实时重建——刷新后的真相以 content 文件 / 服务端渲染为准。
+
+**编辑功能分布**：
+
+| 位置 | 组件 | 可编辑字段 | 操作按钮 |
+|---|---|---|---|
+| 主页卡片 | `EditorCard.astro` | title、location、type、year | 「删除」 |
+| Overlay 详情页 | `ProjectDetailOverlays.astro` | title、location、type、year、description_en | 「换封面图」+「添加图纸」 |
+
+> 用户点击 `/View../` 打开的是隐藏的 `<aside>` overlay（`ProjectDetailOverlays.astro`），**不是** `/projects/[slug].astro` 页面。
 
 ---
 
@@ -61,6 +75,13 @@
 10. `collectOverrides()` 只收集 `.project-column .project-card`，不再混入详情 overlay 的旧 frontmatter。
 11. **全字段 frontmatter 同步**：每次输入把改动的 `data-edit` 字段（title / location / type / year 等）都写回 `card.dataset.frontmatter`——否则刷新后 `applyOverrides()` 会用旧 frontmatter 把可见文字还原。
 12. `localStorage` key 从 v1 一路升到 **v4**，每次换持久化逻辑都清掉历史脏缓存。
+13. **画廊系统落地**：多图客户端压缩 → R2 上传、第一张图 = 封面、HTML5 拖拽排序、非封面图点击显示 ✕ 删除、cover + gallery 跨实例同步到所有同 `data-slug` 卡片。
+14. **Dirty Tracking 优化**：Cloudflare Workers 50 子请求限制 → 仅 `data-dirty="1"` 卡片进入保存请求；保存成功后清理 `dataset.dirty` 和 `deletedImages`。
+15. **Git Data API 单次原子提交**：blob → tree → commit → PATCH ref 全链路，422 冲突时 retry 一次；push 冲突时先 `git pull --no-rebase` 再推。
+16. **处理早期 handoff 中 3 个待修复问题**：
+    - 新建项目卡片 edit-controls 仅保留「删除」，不再错误显示「换封面图」。
+    - lehr 新项在主页位置正确：右栏按 `order` 升序，新项 `order = minOrder - 1` 浮到顶。
+    - 新建项目菜单显示正常：`list_title` 同步 + `updateOverlayListsFromDOM()` 实时重建。
 
 ---
 
@@ -70,6 +91,17 @@
 - **右 LEHRGERÜSTE**：按 `order` 升序。新 lehr 项目 `order = minOrder - 1` 会浮到最顶；现有条目如 `P-Δ 000`(order 1)、`Pagoda 000`(order 2)。
 - `BaseLayout.astro` 与 `edit-mode.ts` 的排序必须一致，否则编辑器与公共预览不一致。
 - 红线：**数字位置**——左 `000 New Project`，右 `New Project 000`。右侧标题里允许带 `000_` 前缀（如 `000_kkProject`），但 `list_title` 要去掉前缀：`kkProject 000`。
+
+**新建项目 / Lehr 行为**：
+
+| 属性 | 默认值 |
+|---|---|
+| 标题 | `000_New Project` |
+| `list_title` | 左：`000 New Project`；右：`New Project 000` |
+| `order` | 左：`999`（在降序中浮到顶）；右：`minOrder - 1`（在升序中浮到顶） |
+| 封面 | R2 占位图 `https://pub-...r2.dev/project-1-1.jpg` |
+| 插入位置 | `col.prepend(card)` — 左右均插在最顶部 |
+| 菜单同步 | 立即调用 `updateOverlayListsFromDOM()`，新项即时出现在 PROJECTS / LEHRGERÜSTE 菜单 |
 
 ---
 
@@ -81,6 +113,9 @@
 4. **编辑器 ≠ 公共预览**：编辑器靠 JS 实时重建菜单，公共站点靠服务端渲染。若两处不一致，以 content 文件 / 服务端渲染为真相；先确认 content 文件对，再让用户硬刷新两端。
 5. **红线文件需确认**：改 `BaseLayout.astro` / `index.astro` / `global.css` 前先列清单给用户。
 6. **README/文档**：除非用户明确要求，不要主动创建 `*.md` 文档（本 HANDOFF.md 是用户明确要求维护的例外）。
+7. **画廊操作会跨实例同步**：Overlay `<aside>` 和主页 `<article>` 是两个独立 DOM 实例。拖排序 / 换封面 / 删图后，`syncGalleryFromDOM()` 会同步所有同 `data-slug` 卡片的 cover + `data-images` 轮播数据。
+8. **Dirty 标记决定保存范围**：只有 `data-dirty="1"` 的卡片会被 `save()` 提交。若改了字段但 dirty 标记未触发，可能保存时丢失。触发 dirty 的操作：文字输入、换封面、添加图纸、删除图纸、拖拽排序、新建项目。
+9. **tdrive 下载 URL 偶发 InvalidAccessKeyId**：`file_download` 的 query 串鉴权 token 会被 `+` 解码破坏；同步时优先用 `search_file` 的 `size` 元数据比对，必要时用 `file_upload` 覆盖上传（请求头鉴权，稳定）。
 
 ---
 
@@ -94,7 +129,8 @@
   `black-room`(022)、`coupling-studies-02`+`computing-hut-02/03`(024)、`nautilus`(030)、
   `the-world-we-live-in-000`、右侧 `pagoda-000`(lehr)、`the-world-we-live-in-000`(lehr)、`archive-pavilion`(lehr) 等。
 - 注意：新增测试项目后，记得在「当前状态」里登记其 slug、`title`、`list_title`、左右归属，便于后续会话核对。
-- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，file_id `fCqidVvbsRqN`）是本文件的跨对话副本，按第 9 节协议与仓库保持双向同步；本会话已执行同步（仓库 push + 共享盘 overwrite 上传），三者（仓库工作树 / GitHub remote / tdrive）一致。
+- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，file_id `fCqidVvbsRqN`）是本文件的跨对话副本，按第 9 节协议与仓库保持双向同步；本会话已整合历史 handoff 信息并同步到仓库与共享盘，三者（仓库工作树 / GitHub remote / tdrive）一致。
+- **历史 handoff 整合**：已把早期对话（基于提交 `9899a11`）中关于画廊、Dirty Tracking、Git Data API、UI 设计史、关键文件索引、Cloudflare 环境变量等有效信息合并到本文件；原记录的 3 个「未修复 Bug」已确认在当前版本中处理完毕，已转入第 4 节修复历史。
 
 ---
 
@@ -107,7 +143,7 @@
 5. 会话结束前更新「近期修复历史」和「当前状态」，保持本文件不过时。
 6. push 用临时 PAT，结束恢复只读 remote。
 7. **会话开始/被要求时，先跑双向同步校验**（见第 9 节）：用 `search_file` 在 tdrive（dir `fhHShMYZJJKF`，keyword `HANDOFF`）拿到共享盘版的 `file_id` 与 `size`，与仓库版比对；有他对话的「增加」就同步回仓库，有「删减」先问用户。
-8. 若本会话改了本文件，结束前把最新版**上传回 tdrive**（删旧传新），保持共享盘 = 仓库最新，供其他对话读取。
+8. 若本会话改了本文件，结束前把最新版**上传回 tdrive**（overwrite），保持共享盘 = 仓库最新，供其他对话读取。
 
 ---
 
@@ -133,3 +169,138 @@
   - 绕过：用 `search_file` 拿 `size`（字节），与仓库版 `wc -c` 比对；size 相同基本可视为一致（同一 markdown 文档字节相同即内容相同概率极高）。
   - 若必须读正文：立即用 `file_download` 拿新 URL 下载（token ~60 分钟有效）；若持续 `InvalidAccessKeyId`，说明下载通道暂不可用，本对话应改用 `search_file` 元数据核对 + 必要时问用户，**不要假装已读正文**。
 - 更新共享盘：**用 `file_upload` 的 `conflict_strategy:"overwrite"` 即可覆盖同名文件**（实测会保留同一 file_id `fCqidVvbsRqN`，无需先删）。流程：`file_upload`(dir=`fhHShMYZJJKF`, file_name=`HANDOFF.md`, file_size=字节数, conflict_strategy=`overwrite`) → 拿 URL/headers → `curl -sSL -X PUT -H "Authorization: …" -H "x-cos-security-token: …" -T 文件 URL` → `file_upload_complete`(confirm_key, task_id)。上传用**请求头**鉴权（非 query 串），token 里的 `+` 不会被破坏，可正常上传；这也解释了为何下载（query 串鉴权）会偶发 `InvalidAccessKeyId` 而上传正常。
+
+---
+
+## 10. 编辑器设计历史与关键决策
+
+本节选自早期开发对话（基于提交 `9899a11`），保留重要的 UI、画廊、保存等设计决策，避免新会话重复试错。
+
+### 一、整体 UI 风格：黑白复古
+
+| 设计元素 | 决策 |
+|---|---|
+| **色彩方案** | 纯黑白（`#111` / `#fff`），移除所有橙色/黄色强调色（原 `#e0972c` / `#c8862b`） |
+| **对话框** | 自定义 monochrome 对话框替代原生 `confirm()` / `alert()`：白底、黑边框、黑色按钮 |
+| **编辑框** | 整个卡片用**一个虚线框**包裹（`outline: 1px dashed #111`），不再按字段分多个重叠框 |
+| **按钮风格** | 统一：`border:1px solid #111; font-size:13px; padding:6px 12px; border-radius:2px; hover 时 background:#111 color:#fff` |
+| **Emoji** | 全部移除（`✅`→`—`，`✎`/`⏳` 删除） |
+| **Edit Bar 位置** | `bottom: 52px`（抬高避免与页脚 INFO 重叠） |
+
+**关键文件**：
+- 对话框定义：`src/scripts/edit-mode.ts` 顶部 `showDialog()` / `showAlert()`
+- 样式：`src/styles/editor.css`
+
+### 二、画廊（Gallery）系统
+
+#### 功能概览
+
+| 功能 | 实现 |
+|---|---|
+| **多图上传** | 「添加图纸」按钮 → 选择多文件 → `createImageBitmap` + canvas 客户端压缩 → 即时 blob 预览 → 后台上传 R2 → 替换为 URL |
+| **封面图** | 画廊第一张图 = 封面图（自动同步到卡片 `<img>`） |
+| **拖拽排序** | HTML5 Drag-and-Drop API（`dragstart`/`dragover`/`dragleave`/`drop`/`dragend`） |
+| **快速删除** | 点击非封面图片 → 图片中心显示 ✕（无圆圈）→ 点 ✕ 删除该图 → 保存时同步删除 R2 桶中对应文件 |
+| **✕ 行为细节** | 默认隐藏；点击 `.gallery-img-wrap`（非 cover）切换 `.selected` 类；✕ 绝对定位 `top:50%;left:50%;transform:translate(-50%,-50%)` 居中于被点击图片；cover 图**永不显示 ✕** |
+
+#### ✕ 按钮演进历史
+
+> 这是一个反复迭代的设计决策：
+
+1. **v1**：放在 Close 按钮区域 ❌ — 用户拒绝
+2. **v2**：每张图片右上角（`top:2px;right:2px`）❌ — 被 `.half-overlay` 的 `overflow:hidden` 截断
+3. **v3**：点击后在被点击图片中心显示 ✕（无圆圈）✅ — 最终方案
+
+#### 跨实例同步
+
+Overlay `<aside>` 和主页 `<article>` 是**两个独立 DOM 实例**。解决方案：
+- `syncGalleryFromDOM(card)` 更新 frontmatter 的 cover + gallery 后，**遍历所有同 `data-slug` 的卡片**同步更新 `<img>` 和轮播 `data-images`
+- overlay 中将某张图拖为第一张 → 主页卡片的封面也会跟着变
+
+**关键文件**：
+- 逻辑：`src/scripts/edit-mode.ts` — `setupGalleryEdit()`, `createGalleryImgWrap()`, `syncGalleryFromDOM()`, `initGalleryDragDrop()`
+- 样式：`src/styles/editor.css` — `.gallery-img-wrap`, `.gallery-del-btn`, `.selected`
+
+### 三、保存机制：Dirty Tracking 优化
+
+#### 问题背景
+
+Cloudflare Workers 免费版限制 **每次调用最多 50 个子请求**。最初每次保存发送全部 13 个项目的 blob（每个 blob = 1 子请求）→ 超限报错 `"Too many subrequests by single Worker invocation"`。
+
+#### 解决方案
+
+| 优化项 | 说明 |
+|---|---|
+| **Dirty 标记** | 每张卡片 `data-dirty="1"` 仅在真正修改后设置 |
+| **触发 dirty 的操作** | 文字输入（`input` listener）、换封面图（`handleReplace`）、添加图纸（`handleGalleryAdd`）、删除图纸（✕ click）、拖拽排序（`dragend`）、新建项目（`newProject`） |
+| **保存时过滤** | `save()` 构建请求时**跳过** `data-dirty !== "1"` 且 `data-toDelete !== "1"` 的卡片 |
+| **R2 清理** | 保存成功后，将 `deletedImages` 数组中的 URL 从 R2 桶删除 |
+| **清除状态** | 保存成功后清除 `dataset.dirty` 和 `dataset.deletedImages` |
+
+#### localStorage 持久化
+
+- 键名：**`am_editor_overrides_v4`**（已从早期 v1 升级）。
+- `collectOverrides()` 收集 dirty / deletedImages / isNew / toDelete / gallery wrappers 状态。
+- `applyOverrides()` 恢复这些状态（包括重建 gallery wrapper DOM）。
+
+**关键文件**：
+- 前端：`src/scripts/edit-mode.ts` — `markDirty()`, `save()`, `collectOverrides()`, `applyOverrides()`
+- 后端：`functions/api/save.ts` — Git Data API 单次原子提交 + R2 删除
+
+### 四、Git Data API 提交策略
+
+| 方面 | 决策 |
+|---|---|
+| **API** | GitHub Git Data API（ref → 获取 commit → 获取 tree → 创建 blobs → 创建新 tree → 创建新 commit → PATCH ref） |
+| **优势** | 单次原子提交（消除逐文件 SHA 竞态），减少 build 次数 |
+| **错误处理** | 422 冲突时 retry 一次 |
+| **Push 冲突** | 本地 `git fetch` + `git pull --no-rebase origin main` 再 push |
+
+**关键文件**：`functions/api/save.ts`
+
+### 五、新建项目 / Lehr 行为
+
+见第 5 节「新建项目 / Lehr 行为」表格。补充说明：
+- 新建项目默认 `cover_image` 为 R2 占位图，gallery 为空。
+- 新建项目卡片的 `edit-controls` 仅含「删除」按钮，与主页 `EditorCard.astro` 一致（不再错误显示「换封面图」）。
+- 新建后即时调用 `updateOverlayListsFromDOM()`，确保菜单立刻出现新项。
+
+### 六、早期 handoff 中记录的问题（已处理）
+
+早期 handoff（提交 `9899a11`）中记录的 3 个「未修复 Bug」在当前版本中已处理完毕，此处保留记录以避免重复报修：
+
+1. **新建项目不应有「换封面图」功能** → 已修复：新建项目卡片的 edit-controls 只保留「删除」。
+2. **Lehr 新增项目主页预览位置错误** → 已修复：右栏按 `order` 升序，新项 `order = minOrder - 1` 浮到顶。
+3. **新建项目菜单列表显示异常** → 已修复：`list_title` 同步 + `updateOverlayListsFromDOM()` 实时重建菜单。
+
+---
+
+## 11. 关键文件索引
+
+| 文件 | 角色 | 是否红线/高危文件 |
+|---|---|---|
+| `src/scripts/edit-mode.ts` | 编辑器核心逻辑（最常改动） | ❌ 否 |
+| `src/styles/editor.css` | 编辑器样式 | ❌ 否 |
+| `src/components/EditorCard.astro` | 主页编辑卡片 | ❌ 否 |
+| `src/components/ProjectDetailOverlays.astro` | Overlay 详情编辑 | ❌ 否 |
+| `functions/api/save.ts` | 保存 API（Git Data API + R2） | ❌ 否 |
+| `src/layouts/BaseLayout.astro` | 基础布局（含菜单排序） | ⚠️ 高危（改动前需确认） |
+| `src/pages/index.astro` | 主页（含左右栏排序） | ⚠️ 高危（改动前需确认） |
+| `src/global.css` | 全局样式 | 🚫 红线（只追加） |
+| `src/components/ProjectCard.astro` | 卡片组件 | 🚫 红线（只追加） |
+
+---
+
+## 12. Cloudflare 环境变量
+
+| 变量 | 用途 |
+|---|---|
+| `EDITOR_BUCKET` | R2 桶绑定 |
+| `R2_PUBLIC_URL` | R2 公开访问 URL（r2.dev） |
+| `GITHUB_PAT` | GitHub Personal Access Token（用于 Git Data API 推送） |
+| `GITHUB_REPO` | GitHub 仓库标识（格式 `owner/repo`） |
+| `EDIT_PASSCODE` | 编辑模式密码验证 |
+
+---
+
+*文档维护：每次会话结束前同步更新本文件、GitHub 仓库、tdrive 共享盘。*
