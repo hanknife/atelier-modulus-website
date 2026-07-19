@@ -89,6 +89,7 @@
     - 新建项目卡片 edit-controls 仅保留「删除」，不再错误显示「换封面图」。
     - lehr 新项在主页位置正确：右栏按 `order` 升序，新项 `order = minOrder - 1` 浮到顶。
     - 新建项目菜单显示正常：`list_title` 同步 + `updateOverlayListsFromDOM()` 实时重建菜单。
+17. **Info 页面编辑功能**：新增 `src/content/info/info.md` 作为 info 内容源；`info.astro` 与 `BaseLayout.astro` 的 info overlay 都从此文件读取；在 `/editor` 中点击 INFO 打开 overlay 即可编辑地址、简介、Exhibitions / Lectures 文本，保存后写回 `info.md`（字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption / page_image`）。
 
 ### 网站设计相关（Coupling / Filter）
 
@@ -143,21 +144,13 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：见 `git log --oneline -1`（本文件本身也是一次提交）
+- 最新提交：本地 `d383e7c`（feat(editor): editable info page from src/content/info/info.md），**尚未 push 到 GitHub**（原因见下）。
 - `localStorage` key：**`am_editor_overrides_v4`**
-- `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序。
-- 内容文件：当前**没有** `new-*.md` 测试项目（用户已通过编辑器删除并保存）。现有项目为原始集：
-  `ruin`(001)、`the-pillar`(005)、`fangyuan-tower`(012)、`threshold-school`(018)、
-  `black-room`(022)、`coupling-studies-02`+`computing-hut-02/03`(024)、`nautilus`(030)、
-  `the-world-we-live-in-000`、右侧 `pagoda-000`(lehr)、`the-world-we-live-in-000`(lehr)、`archive-pavilion`(lehr) 等。
-- 注意：新增测试项目后，记得在「当前状态」里登记其 slug、`title`、`list_title`、左右归属，便于后续会话核对。
-- **Coupling / Filter 状态**：
-  - Coupling 主页已改为纵向拼贴墙：无横向滚动、无重叠、保持原图比例、错落尺寸（最小 span 2）、每次加载随机洗牌。
-  - Filter 词条页（`/filter/[term]`）已复用 coupling 主页的拼贴墙效果。
-  - Filter 页眉 `filter-strip` 已左对齐页脚 `FILTER`、在 42px 页眉区竖向居中。
-  - 相关提交：`fce5f47`（页眉对齐）、`668b821`（filter 复用）、`318112e`（最小图）、`6630434`（错落+masonry）、`f08e851`（保比例）、`cae8852`（不重叠）、`c429dc8`（去横向滚动+随机）。
-- **历史 handoff 整合**：已把早期对话（基于提交 `9899a11`）中关于画廊、Dirty Tracking、Git Data API、UI 设计史、关键文件索引、Cloudflare 环境变量等有效信息合并到本文件；原记录的 3 个「未修复 Bug」已确认在当前版本中处理完毕，已转入第 4 节修复历史。
-- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，file_id `fCqidVvbsRqN`）是本文件的跨对话副本，按第 9 节协议与仓库保持双向同步；本会话已执行同步（仓库 push + 共享盘 overwrite 上传），三者（仓库工作树 / GitHub remote / tdrive）一致。
+- `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
+- 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
+- **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
+- **Coupling / Filter 状态**：未改动，保持原状。
+- **tdrive 同步状态**：本会话已读取共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`），大小 38239 字节，与本会话开始时仓库版一致。本文件已更新，但**仓库尚未 push**；若需跨沙箱同步，请先解决 push 权限后由下一会话从 GitHub 拉取最新版，或重新上传本文件到共享盘。
 
 ---
 
