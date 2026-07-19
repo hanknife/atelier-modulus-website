@@ -94,6 +94,7 @@
   `black-room`(022)、`coupling-studies-02`+`computing-hut-02/03`(024)、`nautilus`(030)、
   `the-world-we-live-in-000`、右侧 `pagoda-000`(lehr)、`the-world-we-live-in-000`(lehr)、`archive-pavilion`(lehr) 等。
 - 注意：新增测试项目后，记得在「当前状态」里登记其 slug、`title`、`list_title`、左右归属，便于后续会话核对。
+- **tdrive 同步状态**：共享盘 `HANDOFF.md`（dir `fhHShMYZJJKF`，当前 file_id `fCqidVvbsRqN`，8225 字节）与本仓库版于本会话核对为一致（size 相同，且本文件在末次编辑 `132c7cb` 后已上传）。双向同步协议见第 9 节。
 
 ---
 
@@ -105,3 +106,30 @@
 4. 若改了 `localStorage` 相关逻辑或怀疑脏缓存，**升 key 版本**（如 v4→v5）并清空旧数据。
 5. 会话结束前更新「近期修复历史」和「当前状态」，保持本文件不过时。
 6. push 用临时 PAT，结束恢复只读 remote。
+7. **会话开始/被要求时，先跑双向同步校验**（见第 9 节）：用 `search_file` 在 tdrive（dir `fhHShMYZJJKF`，keyword `HANDOFF`）拿到共享盘版的 `file_id` 与 `size`，与仓库版比对；有他对话的「增加」就同步回仓库，有「删减」先问用户。
+8. 若本会话改了本文件，结束前把最新版**上传回 tdrive**（删旧传新），保持共享盘 = 仓库最新，供其他对话读取。
+
+---
+
+## 9. 双向同步协议（tdrive 共享盘 ↔ 仓库）
+
+**背景**：每个对话跑在独立沙箱，互相看不到对方文件。HANDOFF.md 是跨对话的唯一共享上下文，存两份：仓库 `/workspace/atelier-modulus-website/HANDOFF.md` 与共享盘 tdrive。tdrive 是跨沙箱的 source of truth。
+
+**tdrive 定位（不要硬编码 file_id，每次用 `search_file` 按名查最新）**：
+- 根目录 dir_id：`fhHShMYZJJKF`
+- 文件名：`HANDOFF`（ext=md）
+- 最新 file_id：以 `search_file` 返回为准（本会话为 `fCqidVvbsRqN`）
+
+**同步规则（用户 2025-07-19 指令「要双向」）**：
+- 其他对话把改动写入共享盘；本对话负责校验并同步。
+- **pull 方向（他对话 → 仓库）**：会话开始/被要求时，`search_file` 拿 tdrive 版 → 与仓库版 diff：
+  - tdrive 只**增加**内容（是仓库超集）→ **自动**同步回仓库：覆盖仓库 `HANDOFF.md` → commit → push（PAT）→ 恢复只读 remote。
+  - tdrive 有**删减/减少** → **先问用户**，确认后再同步。不得自行删除仓库内容。
+  - 两边一致或互不超集 → 不动。
+- **push 方向（仓库 → 共享盘）**：本对话改了 HANDOFF.md 后，把最新版上传回 tdrive，保持共享盘 = 仓库最新，供他对话读取。
+
+**tdrive 访问坑（实测 2025-07-19）**：
+- `file_download` 返回的预签名 URL 当前会返 `InvalidAccessKeyId`（403）——MCP 的下载 token 在服务端被拒（疑似 token 签名/mint 的 infra 问题，与客户端编码无关）。`search_file` / `file_upload` 正常。
+  - 绕过：用 `search_file` 拿 `size`（字节），与仓库版 `wc -c` 比对；size 相同基本可视为一致（同一 markdown 文档字节相同即内容相同概率极高）。
+  - 若必须读正文：立即用 `file_download` 拿新 URL 下载（token ~60 分钟有效）；若持续 `InvalidAccessKeyId`，说明下载通道暂不可用，本对话应改用 `search_file` 元数据核对 + 必要时问用户，**不要假装已读正文**。
+- 更新共享盘无「覆盖写」接口，流程为：`file_delete`(旧 file_id) → `file_upload`(拿上传 URL) → `curl -sSL -T 文件 URL` PUT → `file_upload_complete`。新 file_id 会变化，旧 id 立即失效；删前确认旧 id 正确。
