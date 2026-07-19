@@ -1,0 +1,46 @@
+---
+// Editable card for the /editor route ONLY. Mirrors ProjectCard.astro's markup
+// exactly, but adds data-* hooks and data-edit spans so the in-page editor
+// (src/scripts/edit-mode.ts, loaded solely on /editor) can read and write it.
+// The public site's ProjectCard.astro is untouched — this component is separate.
+const { project, side = "left" } = Astro.props;
+const data = project.data;
+const slug = project.id.replace(/\.mdx?$/, "");
+const displayDate = data.display_date ?? String(data.year);
+const carouselImages = [data.cover_image, ...data.gallery];
+const viewHref = `/projects/${slug}/?side=${side}`;
+const contentPath = `src/content/projects/${slug}.md`;
+const body = project.body ?? "";
+// Full frontmatter (plus raw body) embedded for the in-page editor to rebuild the file.
+const fm = JSON.stringify({ ...data, __body: body });
+---
+<article
+  class={`project-card project-card-${side}`}
+  data-slug={slug}
+  data-path={contentPath}
+  data-category={data.category}
+  data-frontmatter={fm}
+>
+  <figure>
+    <button
+      class="project-carousel"
+      type="button"
+      data-images={JSON.stringify(carouselImages)}
+      aria-label={`Browse images for ${data.title}`}
+    >
+      <img src={data.cover_image} alt={`${data.title} image`} loading="lazy" />
+    </button>
+    <figcaption class="project-meta">
+      <strong><span data-edit="title">{data.title}</span></strong>
+      <span class="project-facts">
+        <span data-edit="location">{data.location}</span><br />
+        <span data-edit="type">{data.type}</span><br />
+        <span data-edit="year">{displayDate}</span>
+        <a class="view-link" data-slug={slug} data-side={side} href={viewHref}>/View../</a>
+      </span>
+    </figcaption>
+  </figure>
+  <div class="edit-controls" hidden>
+    <button type="button" data-role="delete-card">删除</button>
+  </div>
+</article>

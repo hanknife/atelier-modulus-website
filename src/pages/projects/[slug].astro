@@ -22,6 +22,11 @@ const paired = projects[pairedIndex] ?? projects.find((item) => item.id !== proj
 const detailImages = [data.cover_image, ...data.gallery];
 const displayDate = data.display_date ?? String(data.year);
 const pairedSide = currentIndex % 2 === 0 ? "right" : "left";
+const slug = project.id.replace(/\.mdx?$/, "");
+const contentPath = `src/content/projects/${project.id}`;
+const body = project.body ?? "";
+// Full frontmatter embedded so edit-mode.ts can read/write this card like any other.
+const fm = JSON.stringify({ ...data, __body: body });
 ---
 
 <BaseLayout
@@ -32,18 +37,24 @@ const pairedSide = currentIndex % 2 === 0 ? "right" : "left";
   closeText="→Close"
   brandLabel="MODULUS"
 >
-  <article class="detail-split">
+  <article
+    class={`detail-split project-card project-detail`}
+    data-slug={slug}
+    data-path={contentPath}
+    data-category={data.category}
+    data-frontmatter={fm}
+  >
     <section class="detail-main" aria-label={`${data.title} details`}>
       <header class="detail-title">
-        <h1>{data.title}</h1>
+        <h1><span data-edit="title">{data.title}</span></h1>
         <p>
-          {data.location}<br />
-          {data.type}<br />
-          {displayDate}
+          <span data-edit="location">{data.location}</span><br />
+          <span data-edit="type">{data.type}</span><br />
+          <span data-edit="year">{displayDate}</span>
         </p>
       </header>
       <div class="detail-copy">
-        <p>{data.description_en}</p>
+        <p><span data-edit="description_en">{data.description_en}</span></p>
         <Content />
       </div>
       <div class="detail-gallery" aria-label={`${data.title} gallery`}>
@@ -54,6 +65,10 @@ const pairedSide = currentIndex % 2 === 0 ? "right" : "left";
     <aside class="detail-related" aria-label="Opposite project column">
       <ProjectCard project={paired} side={pairedSide} />
     </aside>
+
+    <div class="edit-controls" hidden>
+      <label class="edit-replace-img">换封面图<input type="file" accept="image/*" data-role="replace-image" hidden /></label>
+    </div>
   </article>
   <script is:inline>
     const params = new URLSearchParams(window.location.search);
@@ -67,5 +82,11 @@ const pairedSide = currentIndex % 2 === 0 ? "right" : "left";
       brand.textContent = "ATELIER";
       navCenter.insertBefore(brand, closeLink);
     }
+  </script>
+  {/* Editor script & styles — loaded on every detail page; edit bar stays hidden
+      until the user clicks "编辑". Same security model as /editor route. */}
+  <script>
+    import "../../styles/editor.css";
+    import "../../scripts/edit-mode.ts";
   </script>
 </BaseLayout>

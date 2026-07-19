@@ -17,14 +17,14 @@ Do not edit the older working copy at `/Users/zijianhan/Documents/模象网站` 
 4. Run:
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm build
 ```
 
 5. Review the site locally with:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 6. If Codex made the change, Codex stages the changed files, writes a concise commit summary, and commits locally.
@@ -45,7 +45,7 @@ For each change, Codex should:
 1. Check `git status --short --branch`.
 2. Avoid overwriting user or Workbuddy changes.
 3. Edit only the files needed for the requested change.
-4. Run `npm run build` before deployment handoff.
+4. Run `pnpm build` before deployment handoff.
 5. Stage the intended files only.
 6. Write a concise commit summary from the actual diff and commit locally.
 7. Do not pull or push unless the user explicitly asks.
@@ -57,7 +57,7 @@ Use these Cloudflare Pages settings:
 
 ```text
 Framework preset: Astro
-Build command: npm run build
+Build command: pnpm build
 Output directory: dist
 Root directory: /
 Production branch: main
@@ -78,11 +78,9 @@ Project content lives in:
 src/content/projects
 ```
 
-Images live in:
-
-```text
-public/images
-```
+Images live in the Cloudflare R2 bucket (uploaded via the editor's
+`/api/save` endpoint), not in the repo. The `/editor` route is where
+images are replaced; they are served straight from R2.
 
 For text polishing, translation, summary, and classification, use:
 

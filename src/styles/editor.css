@@ -1,0 +1,206 @@
+/* === In-page editor (WYSIWYG) styles — only loaded on the /editor route.
+   Kept out of global.css so the public site is untouched. These rules only
+   activate under body.edit-mode or the floating #edit-bar, which never appear
+   on the public site. === */
+#edit-bar {
+  position: fixed;
+  right: 16px;
+  bottom: 52px;
+  z-index: 9999;
+  display: flex;
+  gap: 8px;
+}
+#edit-bar button {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  background: var(--mono, #fff);
+  color: #111;
+  cursor: pointer;
+  border-radius: 2px;
+}
+#edit-bar button:hover {
+  background: #111;
+  color: #fff;
+}
+/* Single box around the entire editable text area — not per-field. */
+body.edit-mode .project-meta,
+body.edit-mode .detail-main,
+body.edit-mode .detail-overlay {
+  outline: 1px dashed #111;
+  outline-offset: -2px;
+}
+/* Individual fields stay editable without their own borders. */
+body.edit-mode [data-edit] {
+  cursor: text;
+}
+body.edit-mode [data-edit]:focus {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* --- Edit control buttons (uniform monochrome bordered style) --- */
+.edit-controls {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+.edit-controls .edit-replace-img,
+.edit-controls .edit-add-gallery,
+.edit-controls button {
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #111;
+  color: #111;
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.12s, color 0.12s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.edit-controls .edit-replace-img:hover,
+.edit-controls .edit-add-gallery:hover,
+.edit-controls button:hover {
+  background: #111;
+  color: #fff;
+}
+
+/* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
+body.edit-mode .detail-gallery {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body.edit-mode .detail-gallery img {
+  display: block;
+}
+
+/* Wrapper around each image — establishes positioning context for the X button. */
+body.edit-mode .gallery-img-wrap {
+  position: relative;       /* ← anchors absolute children HERE, not elsewhere */
+  display: inline-block;
+  cursor: grab;
+  transition: opacity 0.15s, outline 0.15s;
+  outline: 2px solid transparent;
+  line-height: 0;
+}
+body.edit-mode .gallery-img-wrap:active {
+  cursor: grabbing;
+}
+body.edit-mode .gallery-img-wrap.dragging {
+  opacity: 0.5;
+}
+body.edit-mode .gallery-img-wrap.drag-over {
+  outline: 2px dashed #111;
+}
+body.edit-mode .gallery-img-wrap img {
+  display: block;
+  max-width: 180px;
+  max-height: 140px;
+  object-fit: contain;
+}
+/* Cover (first image): slightly larger, no X. */
+body.edit-mode .gallery-img-wrap.is-cover img {
+  max-width: 220px;
+  max-height: 165px;
+}
+
+/* X delete button — hidden by default, shown only when parent .gallery-img-wrap
+   has class .selected (user clicked that image). Centered dead on the image. */
+.gallery-del-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: auto;
+  height: auto;
+  padding: 4px 10px;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  z-index: 10;
+  user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s, background 0.12s;
+}
+/* Cover never gets an X — hide unconditionally. */
+body.edit-mode .gallery-img-wrap.is-cover > .gallery-del-btn {
+  display: none !important;
+}
+/* Show ONLY on the clicked/selected image wrapper. */
+body.edit-mode .gallery-img-wrap.selected > .gallery-del-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.gallery-del-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+.gallery-del-btn::before {
+  content: "\00D7"; /* × */
+}
+
+/* === Custom confirmation dialog (monochrome white) === */
+.am-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+}
+.am-dialog-box {
+  font: inherit;
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
+  padding: 24px 28px;
+  max-width: 360px;
+  width: calc(100% - 32px);
+}
+.am-dialog-msg {
+  margin: 0 0 20px;
+  line-height: 1.4;
+  font-size: var(--body-size, clamp(15px, 1.1vw, 20px));
+}
+.am-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.am-dialog-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 16px;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.12s, color 0.12s;
+}
+.am-dialog-ok {
+  background: #111;
+  color: #fff;
+}
+.am-dialog-ok:hover {
+  background: #333;
+}
+.am-dialog-cancel {
+  color: #111;
+}
+.am-dialog-cancel:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.am-dialog-btn:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}

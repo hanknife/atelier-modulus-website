@@ -9,13 +9,20 @@ const projects = (await getCollection("projects"))
   projects.map((project) => {
     const data = project.data;
     const slug = project.id.replace(/\.mdx?$/, "");
+    const contentPath = `src/content/projects/${project.id}`;
+    const body = project.body ?? "";
+    const fm = JSON.stringify({ ...data, __body: body });
     const detailImages = [data.cover_image, ...data.gallery];
     const displayDate = data.display_date ?? String(data.year);
     const side = data.category === "lehrgerueste" ? "right" : "left";
     return (
       <aside
-        class={`half-overlay overlay-${side} detail-overlay`}
+        class={`half-overlay overlay-${side} detail-overlay project-card project-detail`}
         id={`detail-overlay-${slug}`}
+        data-slug={slug}
+        data-path={contentPath}
+        data-category={data.category}
+        data-frontmatter={fm}
         hidden
         aria-label={`${data.title} details`}
       >
@@ -27,18 +34,24 @@ const projects = (await getCollection("projects"))
           {side === "right" ? "Close←" : "→Close"}
         </a>
         <header class="detail-title">
-          <h1>{data.title}</h1>
+          <h1><span data-edit="title">{data.title}</span></h1>
           <p>
-            {data.location}<br />
-            {data.type}<br />
-            {displayDate}
+            <span data-edit="location">{data.location}</span><br />
+            <span data-edit="type">{data.type}</span><br />
+            <span data-edit="year">{displayDate}</span>
           </p>
         </header>
         <div class="detail-copy">
-          <p>{data.description_en}</p>
+          <p><span data-edit="description_en">{data.description_en}</span></p>
         </div>
         <div class="detail-gallery" aria-label={`${data.title} gallery`}>
           {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
+        </div>
+        <div class="edit-controls" hidden>
+          <label class="edit-add-gallery">
+            添加图纸
+            <input type="file" accept="image/*" data-role="add-gallery" multiple hidden />
+          </label>
         </div>
       </aside>
     );

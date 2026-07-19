@@ -79,7 +79,7 @@
 
 ---
 
-## 5. Overlay 菜单排序规则（第 2 条的具体落地）
+## 5. Overlay 菜单排序规则（第 2、6、8 条的具体落地）
 
 - **左 PROJECTS**：按 `list_title` 字符串升序（`localeCompare`），所以 `000 New Project` 在顶，随后 `001 Ruin` … `090_New Project`。
 - **右 LEHRGERÜSTE**：按 `order` 升序。新 lehr 项目 `order = minOrder - 1` 会浮到最顶；现有条目如 `P-Δ 000`(order 1)、`Pagoda 000`(order 2)。
@@ -131,8 +131,8 @@
 4. 若改了 `localStorage` 相关逻辑或怀疑脏缓存，**升 key 版本**（如 v4→v5）并清空旧数据。
 5. 会话结束前更新「近期修复历史」和「当前状态」，保持本文件不过时。
 6. push 用临时 PAT，结束恢复只读 remote。
-7. **会话开始/被要求时，先跑双向同步校验**（见第 9 节）：用 `search_file` 在 tdrive（dir `fhHShMYZJJKF`，keyword `HANDOFF`）拿到共享盘版的 `file_id` 与 `size`，与仓库版比对；有他对话的「增加」就同步回仓库，有「删减」先问用户。
-8. 若本会话改了本文件，结束前把最新版**上传回 tdrive**（删旧传新），保持共享盘 = 仓库最新，供他对话读取。
+7. **会话开始/被要求时，先跑双向同步校验**（见第 9 节）：用 `search_file` 在 tdrive（dir `fhHShMYZJJKF`，keyword `HANDOFF`）拿到共享盘版的 `file_id` 与 `size`，与仓库版比对；有其他对话的「增加」就同步回仓库，有「删减」先问用户。
+8. 若本会话改了本文件，结束前把最新版**上传回 tdrive**（删旧传新），保持共享盘 = 仓库最新，供其他对话读取。
 
 ---
 
@@ -151,7 +151,7 @@
   - tdrive 只**增加**内容（是仓库超集）→ **自动**同步回仓库：覆盖仓库 `HANDOFF.md` → commit → push（PAT）→ 恢复只读 remote。
   - tdrive 有**删减/减少** → **先问用户**，确认后再同步。不得自行删除仓库内容。
   - 两边一致或互不超集 → 不动。
-- **push 方向（仓库 → 共享盘）**：本对话改了 HANDOFF.md 后，把最新版上传回 tdrive，保持共享盘 = 仓库最新，供他对话读取。
+- **push 方向（仓库 → 共享盘）**：本对话改了 HANDOFF.md 后，把最新版上传回 tdrive，保持共享盘 = 仓库最新，供其他对话读取。
 
 **tdrive 访问坑（实测 2025-07-19）**：
 - `file_download` 返回的预签名 URL 当前会返 `InvalidAccessKeyId`（403）——MCP 的下载 token 在服务端被拒（疑似 token 签名/mint 的 infra 问题，与客户端编码无关）。`search_file` / `file_upload` 正常。
