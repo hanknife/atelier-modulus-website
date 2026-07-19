@@ -144,13 +144,13 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：本地 `d383e7c`（feat(editor): editable info page from src/content/info/info.md），**尚未 push 到 GitHub**（原因见下）。
+- 最新提交：`38a474e`（docs(handoff): update status for info editor feature），**已 push 到 GitHub main**（Cloudflare Pages 自动部署中，约 1–2 分钟生效）。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Coupling / Filter 状态**：未改动，保持原状。
-- **tdrive 同步状态**：本会话已读取共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`），大小 38239 字节，与本会话开始时仓库版一致。本文件已更新，但**仓库尚未 push**；若需跨沙箱同步，请先解决 push 权限后由下一会话从 GitHub 拉取最新版，或重新上传本文件到共享盘。
+- **tdrive 同步状态**：共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`）为上一轮同步版本（size 37741），对应仓库 `d383e7c`。本仓库 HANDOFF.md 已随 `38a474e` push 到 GitHub；如需跨沙箱完全一致，可重新上传本文件到共享盘（保持共享盘 = 仓库最新）。
 
 ---
 
