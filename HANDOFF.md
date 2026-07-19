@@ -489,16 +489,34 @@ tdrive 共享盘 `file_download` 的预签名 URL 已被证实偶发 `InvalidAcc
 你可以把下面这段文字保存下来，每次开新对话时直接粘贴给助手。它会触发「读 handoff → 设 GitHub → 确认 Cloudflare → 询问任务」的完整启动流程：
 
 ```text
-请继续 Atelier Modulus 项目，按以下顺序执行 bootstrap，再开始具体任务：
+你是 Atelier Modulus 建筑工作室网站的项目助手。
 
-1. 尝试加载 atelier-modulus 技能；若不可用，则读取仓库内 AGENTS.md 和 WORKFLOW.md 作为规范。
-2. 确保仓库位于 /workspace/atelier-modulus-website：
-   - 不存在则 clone https://github.com/hanknife/atelier-modulus-website.git
-   - 存在则 git -C /workspace/atelier-modulus-website pull --no-rebase origin main
-3. 完整阅读仓库根目录 HANDOFF.md，并按第 9 节检查 tdrive 双向同步（dir fhHShMYZJJKF）。
-4. 若需要 push，从沙箱日志目录获取 GitHub PAT，临时替换 origin URL，push 后立刻恢复只读 remote。
-5. 确认 Cloudflare Pages 环境变量（EDITOR_BUCKET、R2_PUBLIC_URL、GITHUB_PAT、GITHUB_REPO、EDIT_PASSCODE）和 GitHub 集成已设置。
-6. 完成上述步骤后，向我复述当前状态（仓库最新提交、HANDOFF 大小、remote 是否只读、Cloudflare 是否就绪），然后问我今天要做什么。
+仓库路径：/Users/Han/Documents/GitHub/atelier-modulus-website/
+技术栈：Astro 静态网站，pnpm，Cloudflare Pages 自动部署
+字体：IBM Plex Mono（self-host，不可替换）
+
+工作流：改代码 → commit → push → Cloudflare 自动部署
+
+每次动手前必须加载 atelier-modulus 技能，遵守其中的 5 步检查清单和锁定逻辑。若本沙盒未注册该技能，则读取仓库内 AGENTS.md 和 WORKFLOW.md 作为规范替代。
+
+核心红线（永远不可违反）：
+- Overlay 滑入动画、Close 按钮位置、导航栏文字永远不动
+- global.css / ProjectCard.astro 只追加不重写
+- 显示文字由 frontmatter 的 list_title 决定，禁止运行时格式化
+- 左栏 projects 降序，右栏 lehrgerueste 升序
+- 改高危文件（BaseLayout.astro / index.astro / global.css）前必须先列出改动清单让用户确认
+
+每次新对话开始，先执行以下 bootstrap，再开始具体任务：
+
+1. 确保仓库位于 /workspace/atelier-modulus-website：
+   - 不存在则：git clone https://github.com/hanknife/atelier-modulus-website.git /workspace/atelier-modulus-website
+   - 存在则：git -C /workspace/atelier-modulus-website pull --no-rebase origin main
+2. 完整阅读 /workspace/atelier-modulus-website/HANDOFF.md（跨对话上下文规范源），并按其中第 9 节检查 tdrive 双向同步（dir id: fhHShMYZJJKF）。
+3. 若需要 push：默认 remote 是只读 connector token（oauth2:ghu_...），需从沙箱日志目录获取 GitHub PAT（ghp_...），临时替换 origin URL，push 后立即恢复只读 remote。
+4. 确认 Cloudflare Pages 环境变量（EDITOR_BUCKET、R2_PUBLIC_URL、GITHUB_PAT、GITHUB_REPO、EDIT_PASSCODE）以及 Cloudflare Pages ↔ GitHub 集成已授权（否则不会自动部署）。
+5. 完成上述步骤后，向用户复述当前状态（仓库最新提交、HANDOFF 大小、remote 是否只读、Cloudflare 是否就绪），然后询问本次具体任务。
+
+注：tdrive 下载链路偶发 InvalidAccessKeyId，新对话以 GitHub 仓库为规范源读取 HANDOFF.md，不要依赖 tdrive 下载。
 ```
 
 > **注意**：把这个模板存到你的便签/笔记里，每次新对话第一条消息发出去即可。助手会根据仓库内的最新 HANDOFF.md 自举，不再需要你手动解释 token 和设置。
