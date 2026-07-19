@@ -86,14 +86,14 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`3668b5b fix(editor): keep full frontmatter in sync on every input and bump localStorage key to v4`
+- 最新提交：见 `git log --oneline -1`（本文件本身也是一次提交）
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序。
-- 内容文件（新增项目）：
-  - `new-1784388629546.md`：`title: 090_New Project` / `list_title: 090_New Project`（左）
-  - `new-1784390311397.md`：`title: 000_New Project` / `list_title: 034_New Project`（左）
-  - `new-1784388630292.md`：`title: 000_New Project` / `list_title: New Project 000`（右）
-  - `new-1784390328790.md`：`title: 000_kkProject` / `list_title: kkProject 000`（右）
+- 内容文件：当前**没有** `new-*.md` 测试项目（用户已通过编辑器删除并保存）。现有项目为原始集：
+  `ruin`(001)、`the-pillar`(005)、`fangyuan-tower`(012)、`threshold-school`(018)、
+  `black-room`(022)、`coupling-studies-02`+`computing-hut-02/03`(024)、`nautilus`(030)、
+  `the-world-we-live-in-000`、右侧 `pagoda-000`(lehr)、`the-world-we-live-in-000`(lehr)、`archive-pavilion`(lehr) 等。
+- 注意：新增测试项目后，记得在「当前状态」里登记其 slug、`title`、`list_title`、左右归属，便于后续会话核对。
 
 ---
 
