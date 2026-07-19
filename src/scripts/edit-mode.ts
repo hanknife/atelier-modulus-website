@@ -108,10 +108,10 @@ function loadOverrides(): Record<string, any> {
 
 function collectOverrides(): Record<string, any> {
   const state: Record<string, any> = {};
-  // Only collect the editing-surface column cards. The detail overlays are
-  // also .project-card and share the same path/slug; including them would
-  // overwrite the live edits with the server-rendered stale frontmatter.
-  document.querySelectorAll<HTMLElement>(".project-column .project-card").forEach((card) => {
+  // Collect both the editing-surface column cards and the info overlay. The
+  // detail overlays are also .project-card and share the same path/slug;
+  // including them would overwrite the live edits with stale server frontmatter.
+  document.querySelectorAll<HTMLElement>(".project-column .project-card, .info-overlay").forEach((card) => {
     const key = card.dataset.path || card.dataset.slug;
     if (!key) return;
     state[key] = {
@@ -136,7 +136,7 @@ function markDirty(card: HTMLElement) {
 
 function applyOverrides() {
   const state = loadOverrides();
-  document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
+  document.querySelectorAll<HTMLElement>(".project-card, .info-overlay").forEach((card) => {
     const key = card.dataset.path || card.dataset.slug;
     const s = key ? state[key] : undefined;
     if (!s) return;
@@ -151,7 +151,11 @@ function applyOverrides() {
       if (!f || fm[f] == null) return;
       let val: any = fm[f];
       if (f === "year" && fm.display_date) val = fm.display_date;
-      span.textContent = String(val);
+      if (span.dataset.editHtml === "true") {
+        span.innerHTML = String(val);
+      } else {
+        span.textContent = String(val);
+      }
     });
     const img = card.querySelector<HTMLImageElement>("img");
     if (img && fm.cover_image) img.src = fm.cover_image;
@@ -188,12 +192,35 @@ function yamlVal(v: any): string {
   }
   const s = v === null || v === undefined ? "" : String(v);
   if (s === "") return '""';
+  // Multiline strings are easiest to read as literal block scalars.
+  if (s.includes("\n")) {
+    return "|\n" + s.split("\n").map((line) => "  " + line).join("\n");
+  }
   if (/[:#\-?\[\]{}&*!|>'"%@`,\n]/.test(s) || /^\s|\s$/.test(s)) return JSON.stringify(s);
   // Strings that look like a number/boolean/null must stay quoted, or YAML
   // will coerce them (e.g. display_date: "2025" -> 2025) and fail the schema.
   if (/^-?\d+(?:\.\d+)?$/.test(s)) return JSON.stringify(s);
   if (/^(?:true|false|null|~|yes|no|on|off)$/i.test(s)) return JSON.stringify(s);
   return s;
+}
+
+function fieldVal(el: HTMLElement): string {
+  if (el.dataset.editHtml === "true") return el.innerHTML ?? "";
+  return el.innerText ?? "";
+}
+
+function serializeInfo(fm: Fm): string {
+  const fields = [
+    "address", "bio", "exhibitions_label", "exhibitions_note_html",
+    "lectures_label", "lectures_caption", "footer_caption", "page_image",
+  ];
+  const lines = ["---"];
+  for (const f of fields) {
+    if (!(f in fm)) continue;
+    lines.push(`${f}: ${yamlVal(fm[f])}`);
+  }
+  lines.push("---", "", fm.__body ?? "");
+  return lines.join("\n");
 }
 
 function serializeFm(fm: Fm): string {
@@ -713,10 +740,10 @@ async function save() {
   const pass = getPass();
   if (!pass) return;
   saving = true;
-  // Only collect the actual column cards (the editing surface). The detail
+  // Collect the editing surface: column cards plus the info overlay. The detail
   // overlays are read-only previews that share the same data-path; including
   // them has caused duplicate-path / stale-content saves on GitHub.
-  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card"));
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card, .info-overlay"));
 
   // Instant feedback + disable to prevent double-submit.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
@@ -742,7 +769,7 @@ async function save() {
       const fm = parseFm(card);
       card.querySelectorAll<HTMLElement>("[data-edit]").forEach((span) => {
         const field = span.dataset.edit;
-        const val = span.textContent ?? "";
+        const val = fieldVal(span);
         if (!field) return;
         if (field === "year") {
           const yr = parseInt(val, 10);
@@ -752,7 +779,14 @@ async function save() {
           fm[field] = val;
         }
       });
-      items.push({ action: "save", path, content: serializeFm(fm), cover: fm.cover_image, deletedImages: JSON.parse(card.dataset.deletedImages || "[]") });
+      const isInfo = path.startsWith("src/content/info");
+      items.push({
+        action: "save",
+        path,
+        content: isInfo ? serializeInfo(fm) : serializeFm(fm),
+        cover: fm.cover_image ?? "",
+        deletedImages: JSON.parse(card.dataset.deletedImages || "[]"),
+      });
     }
   }
 
@@ -795,7 +829,7 @@ async function save() {
 
   persistOverrides();
   // Clear dirty flags + deletion queue — everything saved.
-  document.querySelectorAll<HTMLElement>(".project-column .project-card").forEach((card) => {
+  document.querySelectorAll<HTMLElement>(".project-column .project-card, .info-overlay").forEach((card) => {
     delete card.dataset.dirty;
     delete card.dataset.deletedImages;
   });
@@ -901,7 +935,7 @@ document.addEventListener("click", async (e) => {
   let persistTimer: number | undefined;
   document.addEventListener("input", (e) => {
     const el = e.target as HTMLElement;
-    const card = el.closest<HTMLElement>(".project-card");
+    const card = el.closest<HTMLElement>("[data-path]");
     if (!card) return;
     markDirty(card);
 
@@ -911,7 +945,7 @@ document.addEventListener("click", async (e) => {
     const field = el.dataset.edit;
     if (field) {
       const fm = parseFm(card);
-      const nextVal = el.textContent ?? "";
+      const nextVal = fieldVal(el);
 
       if (field === "title") {
         fm.title = nextVal;
@@ -932,7 +966,7 @@ document.addEventListener("click", async (e) => {
       card.dataset.frontmatter = JSON.stringify(fm);
     }
 
-    // Update the overlay menus in real time as the user edits.
+    // Update the overlay menus in real time as the user edits project titles.
     updateOverlayListsFromDOM();
 
     clearTimeout(persistTimer);

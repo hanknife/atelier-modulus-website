@@ -32,6 +32,10 @@ const lehrgeruesteList = allProjects
   .filter((p) => p.data.category === "lehrgerueste")
   .sort((a, b) => a.data.order - b.data.order);
 
+const info = (await getCollection("info")).find((i) => i.id.replace(/\.mdx?$/, "") === "info");
+const infoData = info?.data;
+const infoFrontmatter = info ? JSON.stringify({ ...infoData, __body: info.body ?? "" }) : "{}";
+
 ---
 
 <!doctype html>
@@ -80,48 +84,49 @@ const lehrgeruesteList = allProjects
         })}
       </nav>
     </aside>
-    <aside class="half-overlay overlay-right info-overlay" id="info-overlay" aria-label="Info" hidden>
-      <div class="info-overlay-content">
-        <div class="info-grid-row">
-          <div class="black-label info-address">
-            Atelier Modulus GmbH<br /><br />
-            Lehenmattstrasse 200, 4052 Basel,<br />
-            Switzerland<br /><br />
-            info@ateliermodulus.com<br /><br />
-            Instagram:<br />
-            @Atelier Modulus/模象工作室
+    <aside
+      class="half-overlay overlay-right info-overlay"
+      id="info-overlay"
+      aria-label="Info"
+      hidden
+      data-info="true"
+      data-path="src/content/info/info.md"
+      data-frontmatter={infoFrontmatter}
+    >
+      {infoData && (
+        <div class="info-overlay-content">
+          <div class="info-grid-row">
+            <div class="black-label info-address" data-edit="address" style="white-space: pre-wrap;">
+              {infoData.address.trim()}
+            </div>
+            <div class="black-label info-bio" data-edit="bio" style="white-space: pre-wrap;">
+              {infoData.bio.trim()}
+            </div>
           </div>
-          <div class="black-label info-bio">
-            Zijian Han(*1989) studied architecture at ETH Zurich (2016-2020), following a
-            bachelor’s degree in architecture at the University of Kassel (2012-2016)
-            and a bachelor’s degree in civil engineering at Tongji University in
-            Shanghai (2007-2012). He worked as an intern at AHM Architects BDA in Berlin
-            (2014-2015), and later as a structural draftsman at Schnetzer Puskas
-            Ingenieure AG in Switzerland (2021-2025). Since 2022, he has been working
-            as a lead architect at Atelier Modulus. Registered with the Swiss Society
-            of Engineers and Architects (SIA), he works across architecture and
-            structural engineering, engaging in design and construction practice.
+          <div class="info-grid-row">
+            <span class="black-label info-chip chip-exhibitions" data-edit="exhibitions_label">
+              {infoData.exhibitions_label.trim()}
+            </span>
+            <div
+              class="black-label info-note"
+              data-edit="exhibitions_note_html"
+              data-edit-html="true"
+              set:html={infoData.exhibitions_note_html.trim()}
+            />
+          </div>
+          <div class="info-grid-row">
+            <span class="black-label info-chip chip-lectures" data-edit="lectures_label">
+              {infoData.lectures_label.trim()}
+            </span>
+            <div class="black-label info-caption-lecture" data-edit="lectures_caption" style="white-space: pre-wrap;">
+              {infoData.lectures_caption.trim()}
+            </div>
+          </div>
+          <div class="black-label info-caption" data-edit="footer_caption" style="white-space: pre-wrap;">
+            {infoData.footer_caption.trim()}
           </div>
         </div>
-        <div class="info-grid-row">
-          <span class="black-label info-chip chip-exhibitions">Exhibitions</span>
-          <div class="black-label info-note">
-            Selected for the <em>FutureLab</em> exhibition of Chinese emerging graduates
-            in China and abroad, West Bund Art Center, Shanghai, 2024
-          </div>
-        </div>
-        <div class="info-grid-row">
-          <span class="black-label info-chip chip-lectures">Lectures</span>
-          <div class="black-label info-caption-lecture">
-            Seeing as Reality: Towers, Bridges, Aliens, Chairs, Rivers, SP TL,
-            Shanghai, 2026
-          </div>
-        </div>
-        <div class="black-label info-caption">
-          <em>From Object-Oriented Ontology to Self-Other Symmetry</em>
-          &nbsp;&nbsp;&nbsp;&nbsp; 模象不着相
-        </div>
-      </div>
+      )}
     </aside>
     <footer class="site-footer">
       <a

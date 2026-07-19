@@ -178,7 +178,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
               const blobData = (await blobRes.json()) as { sha: string };
               treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: blobData.sha });
               const slug = slugFromPath(item.path);
-              liveOverrides.push({ slug, cover: item.cover ?? "" });
+              if (item.cover) liveOverrides.push({ slug, cover: item.cover });
             } else {
               results.push({ path: item.path, error: "invalid item" });
             }
