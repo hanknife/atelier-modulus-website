@@ -91,6 +91,7 @@
     - 新建项目菜单显示正常：`list_title` 同步 + `updateOverlayListsFromDOM()` 实时重建菜单。
 17. **Info 页面编辑功能**：新增 `src/content/info/info.md` 作为 info 内容源；`info.astro` 与 `BaseLayout.astro` 的 info overlay 都从此文件读取；在 `/editor` 中点击 INFO 打开 overlay 即可编辑地址、简介、Exhibitions / Lectures 文本，保存后写回 `info.md`（字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption / page_image`）。
 18. **Info 预览差异诊断（2025）**：用户报告「编辑界面改了，预览界面看不到 info 更改」。实测确认保存链路正常——GitHub `main` 的 `info.md` 含编辑（`bio` 末尾 `ddd`），但线上 `atelier-modulus-website.pages.dev/info/` 不含。线上站已含 info 编辑功能代码（`data-edit` 钩子），说明部署发生过，但 info.md 内容未更新。根因：info 文本依赖部署，无 R2 即时通道；且本次保存 commit 未反映到线上部署。待修复：为 info 增加 R2 live override（写 `live/info.json` + `live-patch` 应用）。
+19. **Info 字段前导空格修复**：用户报告编辑模式下 `address` / `bio` 前无空格，但预览模式（退出编辑 / 重载）出现前导空格。修复：`edit-mode.ts` 的 `fieldVal()` 保存/输入时对非 HTML 字段 `trim()`；`applyOverrides()` 从 localStorage 恢复时也对非 HTML 字段 `trim()`，使编辑、保存、预览三处一致。
 
 ### 网站设计相关（Coupling / Filter）
 
