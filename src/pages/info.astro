@@ -4,6 +4,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 const info = (await getCollection("info")).find((i) => i.id.replace(/\.mdx?$/, "") === "info") ?? null;
 const data = info?.data;
+
+// Per-line trim so no stray indentation in the source markdown can ever render
+// as a leading space on the public Info page.
+const cleanLines = (v: unknown): string =>
+  String(v ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n")
+    .trim();
 ---
 
 <BaseLayout title="Info / Atelier Modulus">
@@ -11,12 +20,12 @@ const data = info?.data;
     {data && (
       <>
         <img src={data.page_image} alt="" />
-        <div class="black-label info-address" style="white-space: pre-wrap;">{data.address.trim()}</div>
-        <div class="black-label info-bio" style="white-space: pre-wrap;">{data.bio.trim()}</div>
-        <span class="black-label info-chip chip-exhibitions">{data.exhibitions_label.trim()}</span>
-        <div class="black-label info-note" set:html={data.exhibitions_note_html.trim()} />
-        <span class="black-label info-chip chip-lectures">{data.lectures_label.trim()}</span>
-        <div class="black-label info-caption" style="white-space: pre-wrap;">{data.footer_caption.trim()}</div>
+        <div class="black-label info-address" style="white-space: pre-wrap;">{cleanLines(data.address)}</div>
+        <div class="black-label info-bio" style="white-space: pre-wrap;">{cleanLines(data.bio)}</div>
+        <span class="black-label info-chip chip-exhibitions">{cleanLines(data.exhibitions_label)}</span>
+        <div class="black-label info-note" set:html={cleanLines(data.exhibitions_note_html)} />
+        <span class="black-label info-chip chip-lectures">{cleanLines(data.lectures_label)}</span>
+        <div class="black-label info-caption" style="white-space: pre-wrap;">{cleanLines(data.footer_caption)}</div>
       </>
     )}
   </section>

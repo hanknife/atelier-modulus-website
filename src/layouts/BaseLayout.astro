@@ -36,6 +36,16 @@ const info = (await getCollection("info")).find((i) => i.id.replace(/\.mdx?$/, "
 const infoData = info?.data;
 const infoFrontmatter = info ? JSON.stringify({ ...infoData, __body: info.body ?? "" }) : "{}";
 
+// Absolute leading/trailing-whitespace guard for Info text. Trims every line
+// (not just the whole string) so any stray indentation in the source markdown
+// can never surface as a visible leading space in the rendered overlay/page.
+const cleanLines = (v: unknown): string =>
+  String(v ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n")
+    .trim();
+
 ---
 
 <!doctype html>
@@ -96,35 +106,18 @@ const infoFrontmatter = info ? JSON.stringify({ ...infoData, __body: info.body ?
       {infoData && (
         <div class="info-overlay-content">
           <div class="info-grid-row">
-            <div class="black-label info-address" data-edit="address" style="white-space: pre-wrap;">
-              {infoData.address.trim()}
-            </div>
-            <div class="black-label info-bio" data-edit="bio" style="white-space: pre-wrap;">
-              {infoData.bio.trim()}
-            </div>
+            <div class="black-label info-address" data-edit="address" style="white-space: pre-wrap;">{cleanLines(infoData.address)}</div>
+            <div class="black-label info-bio" data-edit="bio" style="white-space: pre-wrap;">{cleanLines(infoData.bio)}</div>
           </div>
           <div class="info-grid-row">
-            <span class="black-label info-chip chip-exhibitions" data-edit="exhibitions_label">
-              {infoData.exhibitions_label.trim()}
-            </span>
-            <div
-              class="black-label info-note"
-              data-edit="exhibitions_note_html"
-              data-edit-html="true"
-              set:html={infoData.exhibitions_note_html.trim()}
-            />
+            <span class="black-label info-chip chip-exhibitions" data-edit="exhibitions_label">{cleanLines(infoData.exhibitions_label)}</span>
+            <div class="black-label info-note" data-edit="exhibitions_note_html" data-edit-html="true" set:html={cleanLines(infoData.exhibitions_note_html)} />
           </div>
           <div class="info-grid-row">
-            <span class="black-label info-chip chip-lectures" data-edit="lectures_label">
-              {infoData.lectures_label.trim()}
-            </span>
-            <div class="black-label info-caption-lecture" data-edit="lectures_caption" style="white-space: pre-wrap;">
-              {infoData.lectures_caption.trim()}
-            </div>
+            <span class="black-label info-chip chip-lectures" data-edit="lectures_label">{cleanLines(infoData.lectures_label)}</span>
+            <div class="black-label info-caption-lecture" data-edit="lectures_caption" style="white-space: pre-wrap;">{cleanLines(infoData.lectures_caption)}</div>
           </div>
-          <div class="black-label info-caption" data-edit="footer_caption" style="white-space: pre-wrap;">
-            {infoData.footer_caption.trim()}
-          </div>
+          <div class="black-label info-caption" data-edit="footer_caption" style="white-space: pre-wrap;">{cleanLines(infoData.footer_caption)}</div>
         </div>
       )}
     </aside>
