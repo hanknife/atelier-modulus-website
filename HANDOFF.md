@@ -90,6 +90,7 @@
     - lehr 新项在主页位置正确：右栏按 `order` 升序，新项 `order = minOrder - 1` 浮到顶。
     - 新建项目菜单显示正常：`list_title` 同步 + `updateOverlayListsFromDOM()` 实时重建菜单。
 17. **Info 页面编辑功能**：新增 `src/content/info/info.md` 作为 info 内容源；`info.astro` 与 `BaseLayout.astro` 的 info overlay 都从此文件读取；在 `/editor` 中点击 INFO 打开 overlay 即可编辑地址、简介、Exhibitions / Lectures 文本，保存后写回 `info.md`（字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption / page_image`）。
+18. **Info 预览差异诊断（2025）**：用户报告「编辑界面改了，预览界面看不到 info 更改」。实测确认保存链路正常——GitHub `main` 的 `info.md` 含编辑（`bio` 末尾 `ddd`），但线上 `atelier-modulus-website.pages.dev/info/` 不含。线上站已含 info 编辑功能代码（`data-edit` 钩子），说明部署发生过，但 info.md 内容未更新。根因：info 文本依赖部署，无 R2 即时通道；且本次保存 commit 未反映到线上部署。待修复：为 info 增加 R2 live override（写 `live/info.json` + `live-patch` 应用）。
 
 ### 网站设计相关（Coupling / Filter）
 
@@ -139,18 +140,20 @@
 8. **画廊操作会跨实例同步**：Overlay `<aside>` 和主页 `<article>` 是两个独立 DOM 实例。拖排序 / 换封面 / 删图后，`syncGalleryFromDOM()` 会同步所有同 `data-slug` 卡片的 cover + `data-images` 轮播数据。
 9. **Dirty 标记决定保存范围**：只有 `data-dirty="1"` 的卡片会被 `save()` 提交。若改了字段但 dirty 标记未触发，可能保存时丢失。触发 dirty 的操作：文字输入、换封面、添加图纸、删除图纸、拖拽排序、新建项目。
 10. **tdrive 下载 URL 偶发 InvalidAccessKeyId**：`file_download` 的 query 串鉴权 token 会被 `+` 解码破坏；同步时优先用 `search_file` 的 `size` 元数据比对，必要时用 `file_upload` 覆盖上传（请求头鉴权，稳定）。
+11. **Info 文本无即时预览**：info 编辑保存后写回 GitHub，必须等 Cloudflare 重建（1–2 分钟）+ 硬刷新才在预览界面生效；项目封面图因走 R2 `live/*.json` 是即时的。若预览界面长期看不到 info 更改，先确认 GitHub `info.md` 是否已更新（排除保存失败），再确认 Cloudflare 部署是否触发。
 
 ---
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`38a474e`（docs(handoff): update status for info editor feature），**已 push 到 GitHub main**（Cloudflare Pages 自动部署中，约 1–2 分钟生效）。
+- 最新提交：`7d97ae6`（docs(handoff): mark info editor feature as pushed to GitHub main），**已 push 到 GitHub main 且线上已部署**（线上 `atelier-modulus-website.pages.dev` 含 info 编辑功能代码 `data-edit` 钩子）。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
+- **Info 预览差异（已知问题，待修复）**：info 文本保存已确认写回 GitHub（实测 `main` 的 `info.md` 含编辑 `bio` 末尾 `ddd`），但线上 `atelier-modulus-website.pages.dev` 构建产物仍不含 `ddd`——线上站已含 info 编辑功能代码（部署发生过），但 info.md 内容未更新。根因：info 文本走 GitHub → Cloudflare 重建，不像项目封面图走 R2 `live/*.json` 即时通道；且本次保存 commit 未反映到线上部署。修复方向：给 info 加 R2 即时预览（`save.ts` 写 `live/info.json` + 前端 `live-patch` 应用），让预览界面保存后即时更新。涉及 `BaseLayout.astro`（仅追加 import，仍属高危，需列清单确认后再动）。
 - **Coupling / Filter 状态**：未改动，保持原状。
-- **tdrive 同步状态**：共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`）为上一轮同步版本（size 37741），对应仓库 `d383e7c`。本仓库 HANDOFF.md 已随 `38a474e` push 到 GitHub；如需跨沙箱完全一致，可重新上传本文件到共享盘（保持共享盘 = 仓库最新）。
+- **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `7d97ae6` 已 push，且本次会话新增 info 预览差异诊断；上传后共享盘 = 仓库最新。
 
 ---
 
