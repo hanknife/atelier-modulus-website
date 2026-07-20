@@ -148,7 +148,7 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`59c5883`（feat(editor): instant info-text preview via R2 live override），**已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格修复）。
+- 最新提交：`01dedf2`（fix(live-patch): match /info and /info/ pathname for info override）+ `b9ccf8c`（feat(editor): instant info-text preview via R2 live override），**已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格修复）。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
