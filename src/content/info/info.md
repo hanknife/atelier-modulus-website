@@ -14,12 +14,8 @@ exhibitions_note_html: |
   Selected for the <em>FutureLab</em> exhibition of Chinese emerging graduates in China and abroad, West Bund Art Center, Shanghai, 2024
 
 lectures_label: Lectures
-lectures_caption: |
-  Seeing as Reality: Towers, Bridges, Aliens, Chairs, Rivers, SP TL, Shanghai, 2026
-
-footer_caption: |
-  From Object-Oriented Ontology to Self-Other Symmetry     模象不着相
-
+lectures_caption: "Seeing as Reality: Towers, Bridges, Aliens, Chairs, Rivers, SP TL, Shanghai, 2026"
+footer_caption: "From Object-Oriented Ontology to Self-Other Symmetry     模象不着相"
 page_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-01.png"
 ---
 
