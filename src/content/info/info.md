@@ -8,7 +8,7 @@ address: |
   
   Instagram:
   @Atelier Modulus/模象工作室
-bio: "Zijian Han(*1989) studied architecture at ETH Zurich (2016-2020), following a bachelor’s degree in architecture at the University of Kassel (2012-2016) and a bachelor’s degree in civil engineering at Tongji University in Shanghai (2007-2012). He worked as an intern at AHM Architects BDA in Berlin (2014-2015), and later as a structural draftsman at Schnetzer Puskas Ingenieure AG in Switzerland (2021-2025). Since 2022, he has been working as a lead architect at Atelier Modulus. Registered with the Swiss Society of Engineers and Architects (SIA), he works across architecture and structural engineering, engaging in design and construction practice. d"
+bio: "Zijian Han(*1989) studied architecture at ETH Zurich (2016-2020), following a bachelor’s degree in architecture at the University of Kassel (2012-2016) and a bachelor’s degree in civil engineering at Tongji University in Shanghai (2007-2012). He worked as an intern at AHM Architects BDA in Berlin (2014-2015), and later as a structural draftsman at Schnetzer Puskas Ingenieure AG in Switzerland (2021-2025). Since 2022, he has been working as a lead architect at Atelier Modulus. Registered with the Swiss Society of Engineers and Architects (SIA), he works across architecture and structural engineering, engaging in design and construction practice."
 exhibitions_label: Exhibitions
 exhibitions_note_html: |
   Selected for the <em>FutureLab</em> exhibition of Chinese emerging graduates in China and abroad, West Bund Art Center, Shanghai, 2024
