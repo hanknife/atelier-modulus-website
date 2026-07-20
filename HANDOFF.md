@@ -97,7 +97,7 @@
 
 22. **Info 前导空格「绝对有效」根治（编辑器浮层 + 公共页双重修复）**：用户第三次报「怎么还有，不能找到一个绝对有效的办法吗」。前两次分别修了 `edit-mode.ts`（按行 trim）与 `info.astro`（行内表达式 + 整串 trim），但空格依旧复发。本次**实测定位到真正的复发源**：`BaseLayout.astro` 的 Info 浮层（`.info-overlay` 内 `.info-address` / `.info-bio` / `.info-caption` 等 7 个字段）与我之前改的 `info.astro` 是**完全相同的多行表达式空白 bug**——`{infoData.address.trim()}` 前的缩进换行被 Astro 保留成 `> Atelier Modulus GmbH` 那个行首空格。公共 `/info` 页（info.astro）早已干净，但用户实际看到的空格来自这个**一直没修的浮层**。修复（纵深防御，三个渲染出口统一逐行归一化）：① **`BaseLayout.astro` info 浮层 7 字段全改行内表达式**，新增 `cleanLines(v)=String(v).split("\n").map(l=>l.trim()).join("\n").trim()` 助手逐行归一化；② `info.astro` 同步升级为 `cleanLines()` 逐行 trim（原来只是整串 `.trim()`）；③ `edit-mode.ts` / `live-patch.ts` 此前已按行 trim。无论 frontmatter 数据带多少缩进/前导空格，浮层、公共页、R2 覆盖三处都逐行 trim，**彻底杜绝行首空格**。⚠️ 本次**改动了高危文件 `BaseLayout.astro`**，但范围严格限定在 info 浮层的文字渲染（行内表达式 + `cleanLines`），**未动** overlay 滑入动画 / Close 按钮 / 导航栏 / 菜单排序，符合红线精神；改动清单见第 4 节条目 22 与第 7 节「当前状态」。
 
-23. **防回潮自动体检（避免「只改几处、漏掉双胞胎」）**：用户要求建立机制，杜绝再犯「没全局扫描、只看几个点」的马虎遗漏。落实三条：① **自动卡死脚本** `scripts/check-info-whitespace.mjs`——`astro build` 之后自动递归扫描整个 `dist/` 所有 HTML，只要任一 Info 字段（`info-address` / `info-bio` / `info-caption` / `info-caption-lecture` / `chip-exhibitions` / `chip-lectures` / `info-note`）的内容以空格开头，就报错并**阻断部署**（`build` 脚本已串接 `&& node scripts/check-info-whitespace.mjs`；也可单独 `pnpm verify:info`）。已做「故意注入空格」回归测试，确认脚本能拦住（exit 1）且干净时通过（exit 0）。② **全局扫描纪律**：凡改 Info 文字显示，先 `grep` 全仓库所有 `info-*` / `data-edit` 渲染点（公开页 `info.astro`、编辑器浮层 `BaseLayout.astro`、即时预览 `live-patch.ts`），一处不落统一改。③ **单一清理入口（语义一致）**：`cleanLines()` 的逐行 trim 逻辑在 `info.astro` 与 `BaseLayout.astro` 各有一份（故意不抽共享模块，避免引入跨文件依赖风险），但语义一致，靠体检脚本兜底。
+23. **防回潮自动体检（避免「只改几处、漏掉双胞胎」）**：用户要求建立机制，杜绝再犯「没全局扫描、只看几个点」的马虎遗漏。这是一条**通用原则**的落地：同一段内容在代码里出现多份（双胞胎/多胞胎）时，靠「自动检查 + 全局搜索 + 单一来源」三件套防漏改，而不是靠人记性。落实：① **自动卡死脚本（已泛化）** `scripts/check-pre-whitespace.mjs`——`astro build` 之后自动递归扫描整个 `dist/` 所有 HTML，**不再绑定具体类名**，而是「任何 `white-space: pre` / `pre-wrap` 元素，只要内容以空格开头就报错并阻断部署」（`build` 脚本已串接 `&& node scripts/check-pre-whitespace.mjs`；也可单独 `pnpm verify:pre`）。已做回归测试：注入 Info 空格、以及**伪造一个全新的 pre-wrap 字段**都能拦住（exit 1），普通流元素不误伤，干净时通过（exit 0）。② **全局扫描纪律**：凡改 Info/任何文字显示，先 `grep` 全仓库所有 `info-*` / `data-edit` / 对应渲染点（公开页、`BaseLayout.astro` 浮层、即时预览 `live-patch.ts`），一处不落统一改。③ **单一清理入口（语义一致）**：`cleanLines()` 逐行 trim 逻辑在 `info.astro` 与 `BaseLayout.astro` 各有一份（故意不抽共享模块，避免跨文件依赖风险），但语义一致，靠体检脚本兜底。
 
 ### 网站设计相关（Coupling / Filter）
 
@@ -148,14 +148,14 @@
 9. **Dirty 标记决定保存范围**：只有 `data-dirty="1"` 的卡片会被 `save()` 提交。若改了字段但 dirty 标记未触发，可能保存时丢失。触发 dirty 的操作：文字输入、换封面、添加图纸、删除图纸、拖拽排序、新建项目。
 10. **tdrive 下载 URL 偶发 InvalidAccessKeyId**：`file_download` 的 query 串鉴权 token 会被 `+` 解码破坏；同步时优先用 `search_file` 的 `size` 元数据比对，必要时用 `file_upload` 覆盖上传（请求头鉴权，稳定）。
 11. **Info 文本无即时预览**：info 编辑保存后写回 GitHub，必须等 Cloudflare 重建（1–2 分钟）+ 硬刷新才在预览界面生效；项目封面图因走 R2 `live/*.json` 是即时的。若预览界面长期看不到 info 更改，先确认 GitHub `info.md` 是否已更新（排除保存失败），再确认 Cloudflare 部署是否触发。
-12. **Info 前导空格防回潮**：每次改 Info 文字显示相关代码（`info.astro` / `BaseLayout.astro` 的 info 浮层 / `live-patch.ts` / `edit-mode.ts`）后，必须跑 `pnpm verify:info`（已串进 `build`）确认无行首空格；构建失败即说明某处又漏了，先**全局 `grep` 所有 `info-*` / `data-edit` 渲染点**补齐，不要绕过脚本。脚本位置 `scripts/check-info-whitespace.mjs`。
+12. **前导空格防回潮（通用）**：每次改任何「`white-space: pre` / `pre-wrap` 元素」的文字显示相关代码后，必须跑 `pnpm verify:pre`（已串进 `build`）确认无行首空格；构建失败即说明某处又漏了，先**全局 `grep` 所有 `pre-wrap` / `info-*` / `data-edit` 渲染点**补齐，不要绕过脚本。脚本位置 `scripts/check-pre-whitespace.mjs`（按 CSS 属性扫描，不绑定具体类名，未来新增同类字段也会自动被卡）。
 
 ---
 
 ## 7. 当前状态（截至最新提交）
 
 - 最新提交：`b077e5f`（ci: add info leading-whitespace guard to build）+ `61efd19`（fix(info): absolute leading-whitespace guard for editor overlay + public page），**均已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格双重修复 + 防回潮自动体检）。更早相关提交：`fb1f98c`（merge）/ `702546d` / `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复）。
-- **防回潮自动体检（见条目 23 / 坑 12）**：新增 `scripts/check-info-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-info-whitespace.mjs`）并支持单独 `pnpm verify:info`。它递归扫描 `dist/` 全部 HTML，任一 Info 字段内容以空格开头即报错**阻断部署**；已用「故意注入空格」回归测试验证（exit 1 拦截 / 干净 exit 0）。今后改 Info 文字显示相关代码，构建失败即说明某处又漏改，需全局 grep `info-*` / `data-edit` 渲染点补齐。
+- **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
