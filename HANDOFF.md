@@ -95,6 +95,8 @@
 20. **Info 文本 R2 即时预览（解决「预览看不到更改」）**：为 info 文本补齐与项目封面图同式的 R2 即时通道。改动（均非红线文件）：`edit-mode.ts` 的 `save()` 对 info 项在 payload 附带 `info` 结构化字段；`functions/api/save.ts` 保存成功后写 `live/info.json`（含 7 个文本字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption`）；`functions/api/live.ts` 回传完整 data（不再只取 `cover_image`）；`src/scripts/live-patch.ts` 在 `/info` 页把 `live/info.json` 文本按 `.info-collage` 作用域覆盖到对应元素（`exhibitions_note_html` 用 `innerHTML`，其余用 `textContent`）。效果：编辑器保存 info 后，公共 `/info` 页**秒级**反映，无需等 Cloudflare 重建（1–2 分钟）。关键：`BaseLayout.astro` 第 188 行**早已 import** `live-patch.ts`，本修复**无需改动任何红线文件**（BaseLayout / index.astro / global.css）；`info.astro` 也无需加 `data-edit` 钩子（用现有 `.info-*` class 匹配）。
 21. **Info 前导空格根因真正修复**：用户再次报告「还是有空格」。真正根因不是 frontmatter 数据本身，而是 `info.astro` 模板在 `white-space: pre-wrap` 的 div 里保留了 `{data.address.trim()}` 表达式前后的缩进/换行空白，导致构建出的 HTML 每一行前面都有空格；旧 `live/info.json` 也可能残留行首空格。修复：`info.astro` 把表达式改成行内（`<div>{data.address.trim()}</div>`），不再让 Astro 保留模板空白；`edit-mode.ts` 的 `fieldVal()` 和 `applyOverrides()` 从「整串 trim」升级为「每行 trim」；`live-patch.ts` 应用 R2 覆盖时也每行 trim。合并时远程 `info.md` 已更新（用户把 `lectures_caption` / `footer_caption` 改成行内引号），已取远程并清理尾部空格。本修复仍**未触碰红线文件**。
 
+22. **Info 前导空格「绝对有效」根治（编辑器浮层 + 公共页双重修复）**：用户第三次报「怎么还有，不能找到一个绝对有效的办法吗」。前两次分别修了 `edit-mode.ts`（按行 trim）与 `info.astro`（行内表达式 + 整串 trim），但空格依旧复发。本次**实测定位到真正的复发源**：`BaseLayout.astro` 的 Info 浮层（`.info-overlay` 内 `.info-address` / `.info-bio` / `.info-caption` 等 7 个字段）与我之前改的 `info.astro` 是**完全相同的多行表达式空白 bug**——`{infoData.address.trim()}` 前的缩进换行被 Astro 保留成 `> Atelier Modulus GmbH` 那个行首空格。公共 `/info` 页（info.astro）早已干净，但用户实际看到的空格来自这个**一直没修的浮层**。修复（纵深防御，三个渲染出口统一逐行归一化）：① **`BaseLayout.astro` info 浮层 7 字段全改行内表达式**，新增 `cleanLines(v)=String(v).split("\n").map(l=>l.trim()).join("\n").trim()` 助手逐行归一化；② `info.astro` 同步升级为 `cleanLines()` 逐行 trim（原来只是整串 `.trim()`）；③ `edit-mode.ts` / `live-patch.ts` 此前已按行 trim。无论 frontmatter 数据带多少缩进/前导空格，浮层、公共页、R2 覆盖三处都逐行 trim，**彻底杜绝行首空格**。⚠️ 本次**改动了高危文件 `BaseLayout.astro`**，但范围严格限定在 info 浮层的文字渲染（行内表达式 + `cleanLines`），**未动** overlay 滑入动画 / Close 按钮 / 导航栏 / 菜单排序，符合红线精神；改动清单见第 4 节条目 22 与第 7 节「当前状态」。
+
 ### 网站设计相关（Coupling / Filter）
 
 17. **Coupling 主页去横向滚动**：原横向 `2820px` 固定坐标墙改为仅上下滚动的拼贴墙。
@@ -149,12 +151,12 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`fb1f98c`（Merge remote-tracking branch 'origin/main' into info-whitespace-fix）+ `702546d`（fix(info): remove leading whitespace in rendered info text）+ `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复），**已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格根因修复）。
+- 最新提交：`61efd19`（fix(info): absolute leading-whitespace guard for editor overlay + public page），**已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格双重修复）。更早相关提交：`fb1f98c`（merge）/ `702546d` / `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复）。
 - `localStorage` key：**`am_editor_overrides_v4`**
-- `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
+- `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
-- **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经进一步定位（见条目 21）：真正根因是 `info.astro` 模板保留了 `white-space: pre-wrap` div 里的表达式前后空白，导致构建出的 HTML 每行前面都有空格；已改为行内表达式，并配合 `edit-mode.ts` / `live-patch.ts` 的按行 trim，红线文件均未触碰。
+- **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
 - **Coupling / Filter 状态**：未改动，保持原状。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
