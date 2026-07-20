@@ -92,6 +92,7 @@
 17. **Info 页面编辑功能**：新增 `src/content/info/info.md` 作为 info 内容源；`info.astro` 与 `BaseLayout.astro` 的 info overlay 都从此文件读取；在 `/editor` 中点击 INFO 打开 overlay 即可编辑地址、简介、Exhibitions / Lectures 文本，保存后写回 `info.md`（字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption / page_image`）。
 18. **Info 预览差异诊断（2025）**：用户报告「编辑界面改了，预览界面看不到 info 更改」。实测确认保存链路正常——GitHub `main` 的 `info.md` 含编辑（`bio` 末尾 `ddd`），但线上 `atelier-modulus-website.pages.dev/info/` 不含。线上站已含 info 编辑功能代码（`data-edit` 钩子），说明部署发生过，但 info.md 内容未更新。根因：info 文本依赖部署，无 R2 即时通道；且本次保存 commit 未反映到线上部署。待修复：为 info 增加 R2 live override（写 `live/info.json` + `live-patch` 应用）。
 19. **Info 字段前导空格修复**：用户报告编辑模式下 `address` / `bio` 前无空格，但预览模式（退出编辑 / 重载）出现前导空格。修复：`edit-mode.ts` 的 `fieldVal()` 保存/输入时对非 HTML 字段 `trim()`；`applyOverrides()` 从 localStorage 恢复时也对非 HTML 字段 `trim()`，使编辑、保存、预览三处一致。
+20. **Info 文本 R2 即时预览（解决「预览看不到更改」）**：为 info 文本补齐与项目封面图同式的 R2 即时通道。改动（均非红线文件）：`edit-mode.ts` 的 `save()` 对 info 项在 payload 附带 `info` 结构化字段；`functions/api/save.ts` 保存成功后写 `live/info.json`（含 7 个文本字段：`address / bio / exhibitions_label / exhibitions_note_html / lectures_label / lectures_caption / footer_caption`）；`functions/api/live.ts` 回传完整 data（不再只取 `cover_image`）；`src/scripts/live-patch.ts` 在 `/info` 页把 `live/info.json` 文本按 `.info-collage` 作用域覆盖到对应元素（`exhibitions_note_html` 用 `innerHTML`，其余用 `textContent`）。效果：编辑器保存 info 后，公共 `/info` 页**秒级**反映，无需等 Cloudflare 重建（1–2 分钟）。关键：`BaseLayout.astro` 第 188 行**早已 import** `live-patch.ts`，本修复**无需改动任何红线文件**（BaseLayout / index.astro / global.css）；`info.astro` 也无需加 `data-edit` 钩子（用现有 `.info-*` class 匹配）。
 
 ### 网站设计相关（Coupling / Filter）
 
@@ -147,12 +148,12 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`7d97ae6`（docs(handoff): mark info editor feature as pushed to GitHub main），**已 push 到 GitHub main 且线上已部署**（线上 `atelier-modulus-website.pages.dev` 含 info 编辑功能代码 `data-edit` 钩子）。
+- 最新提交：`59c5883`（feat(editor): instant info-text preview via R2 live override），**已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格修复）。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
-- **Info 预览差异（已知问题，待修复）**：info 文本保存已确认写回 GitHub（实测 `main` 的 `info.md` 含编辑 `bio` 末尾 `ddd`），但线上 `atelier-modulus-website.pages.dev` 构建产物仍不含 `ddd`——线上站已含 info 编辑功能代码（部署发生过），但 info.md 内容未更新。根因：info 文本走 GitHub → Cloudflare 重建，不像项目封面图走 R2 `live/*.json` 即时通道；且本次保存 commit 未反映到线上部署。修复方向：给 info 加 R2 即时预览（`save.ts` 写 `live/info.json` + 前端 `live-patch` 应用），让预览界面保存后即时更新。涉及 `BaseLayout.astro`（仅追加 import，仍属高危，需列清单确认后再动）。
+- **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」根因是 info 文本只走 GitHub → Cloudflare 重建（1–2 分钟），无 R2 即时通道。本会话已补上：编辑保存 info 后 `save.ts` 写 `live/info.json`，公共 `/info` 页由 `live-patch.ts` 秒级覆盖文本，无需等重建；前导空格不一致（条目 19）也已修复。本修复**未触碰红线文件**（`BaseLayout.astro` 早已 import `live-patch.ts`，`info.astro` 用现有 `.info-*` class 匹配，无需加钩子）。
 - **Coupling / Filter 状态**：未改动，保持原状。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `7d97ae6` 已 push，且本次会话新增 info 预览差异诊断；上传后共享盘 = 仓库最新。
 

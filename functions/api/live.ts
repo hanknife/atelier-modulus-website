@@ -16,7 +16,7 @@ interface Env {
 
 export const onRequestGet = async (context: { env: Env }) => {
   const { env } = context;
-  const map: Record<string, { cover_image: string }> = {};
+  const map: Record<string, any> = {};
   if (env.EDITOR_BUCKET) {
     try {
       const listed = await env.EDITOR_BUCKET.list({ prefix: "live/" });
@@ -26,7 +26,7 @@ export const onRequestGet = async (context: { env: Env }) => {
         if (!got) continue;
         try {
           const data = JSON.parse(await got.text());
-          if (data && data.cover_image) map[slug] = { cover_image: data.cover_image };
+          if (data) map[slug] = data;
         } catch {
           /* ignore malformed entry */
         }

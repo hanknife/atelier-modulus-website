@@ -125,7 +125,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         "X-GitHub-Api-Version": "2022-11-28",
       };
 
-      const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[] }> = body.items ?? [];
+      const items: Array<{ action: string; path: string; content?: string; cover?: string; deletedImages?: string[]; info?: Record<string, string> }> = body.items ?? [];
       // Deduplicate by path: if the same slug is dirty in both the column card
       // and the overlay, keep only the last item. Duplicate tree entries cause
       // GitHub to reject the tree with GitRPC::BadObjectState 422.
@@ -159,6 +159,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           // 2) Create a blob per file + collect tree entries.
           const treeEntries: Array<{ path: string; mode: string; type: string; sha: string | null }> = [];
           const liveOverrides: Array<{ slug: string; cover: string }> = [];
+          let liveInfo: Record<string, string> | null = null;
 
           for (const item of uniqueItems) {
             if (item.action === "delete") {
@@ -179,6 +180,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
               treeEntries.push({ path: item.path, mode: "100644", type: "blob", sha: blobData.sha });
               const slug = slugFromPath(item.path);
               if (item.cover) liveOverrides.push({ slug, cover: item.cover });
+              if (item.info) liveInfo = item.info;
             } else {
               results.push({ path: item.path, error: "invalid item" });
             }
@@ -234,6 +236,19 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
           // 6) Write live overrides (best-effort, R2).
           for (const lo of liveOverrides) {
             await writeLiveOverride(env, lo.slug, lo.cover);
+          }
+          // 6b) Write a live info-text override so the public Info page reflects
+          // edits instantly (before the static rebuild finishes). Best-effort.
+          if (liveInfo && env.EDITOR_BUCKET) {
+            try {
+              await env.EDITOR_BUCKET.put(
+                "live/info.json",
+                JSON.stringify(liveInfo),
+                { httpMetadata: { contentType: "application/json" } }
+              );
+            } catch {
+              /* non-fatal */
+            }
           }
 
           // 7) Delete removed gallery images from R2 (best-effort).

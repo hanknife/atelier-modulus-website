@@ -223,6 +223,18 @@ function serializeInfo(fm: Fm): string {
   return lines.join("\n");
 }
 
+function pickInfoFields(fm: Fm): Record<string, string> {
+  const fields = [
+    "address", "bio", "exhibitions_label", "exhibitions_note_html",
+    "lectures_label", "lectures_caption", "footer_caption",
+  ];
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    if (f in fm) out[f] = String(fm[f] ?? "");
+  }
+  return out;
+}
+
 function serializeFm(fm: Fm): string {
   const fields = [
     "title", "list_title", "year", "location", "type", "status",
@@ -786,6 +798,7 @@ async function save() {
         content: isInfo ? serializeInfo(fm) : serializeFm(fm),
         cover: fm.cover_image ?? "",
         deletedImages: JSON.parse(card.dataset.deletedImages || "[]"),
+        ...(isInfo ? { info: pickInfoFields(fm) } : {}),
       });
     }
   }
