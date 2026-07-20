@@ -38,7 +38,7 @@ async function patchLive() {
     // instantly, without waiting for the Cloudflare rebuild. Scoped to the
     // server-rendered .info-collage so we never touch the editor's hidden
     // overlay or clobber unsaved localStorage edits on the /editor surface.
-    if (location.pathname === "/info") {
+    if (location.pathname === "/info" || location.pathname === "/info/") {
       const info = map["info"];
       const scope = document.querySelector<HTMLElement>(".info-collage");
       if (info && scope) {
