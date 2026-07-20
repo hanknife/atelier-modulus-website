@@ -45,10 +45,15 @@ async function patchLive() {
         const setField = (sel: string, val?: string, asHtml = false) => {
           const el = scope.querySelector<HTMLElement>(sel);
           if (!el || val == null) return;
+          const clean = val
+            .split("\n")
+            .map((line) => line.trim())
+            .join("\n")
+            .trim();
           if (asHtml) {
-            if (el.innerHTML !== val) el.innerHTML = val;
+            if (el.innerHTML !== clean) el.innerHTML = clean;
           } else {
-            if (el.textContent !== val) el.textContent = val;
+            if (el.textContent !== clean) el.textContent = clean;
           }
         };
         setField(".info-address", info.address);

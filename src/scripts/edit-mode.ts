@@ -154,7 +154,11 @@ function applyOverrides() {
       if (span.dataset.editHtml === "true") {
         span.innerHTML = String(val);
       } else {
-        span.textContent = String(val).trim();
+        span.textContent = String(val)
+          .split("\n")
+          .map((line) => line.trim())
+          .join("\n")
+          .trim();
       }
     });
     const img = card.querySelector<HTMLImageElement>("img");
@@ -206,7 +210,11 @@ function yamlVal(v: any): string {
 
 function fieldVal(el: HTMLElement): string {
   if (el.dataset.editHtml === "true") return el.innerHTML ?? "";
-  return (el.innerText ?? "").trim();
+  return (el.innerText ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .trim();
 }
 
 function serializeInfo(fm: Fm): string {
