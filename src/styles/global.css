@@ -1324,3 +1324,108 @@ main {
   display: flex;
   align-items: center;
 }
+
+/* === Filter editing UI (append-only, original rules untouched) ============ */
+
+/* Filter-edit toolbar — fixed bar at bottom-left when in filter-edit mode */
+#filter-edit-bar {
+  position: fixed;
+  bottom: var(--pad-x);
+  left: var(--pad-x);
+  z-index: 9000;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--mono), 'IBM Plex Mono', monospace;
+  font-size: var(--body-size);
+}
+#filter-edit-bar button {
+  background: #000;
+  color: #fff;
+  border: 1px solid #fff;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+#filter-edit-bar button:hover {
+  background: #fff;
+  color: #000;
+}
+#filter-edit-bar .filter-edit-label {
+  font-weight: bold;
+}
+
+/* Selected tile highlight on coupling board (multi-select mode) */
+.filter-edit-mode .coupling-tile.filter-selected {
+  outline: 3px solid #fff;
+  outline-offset: -3px;
+  box-shadow: 0 0 0 1px #000 inset;
+}
+.filter-edit-mode .coupling-tile.filter-selected img {
+  filter: saturate(1.2) contrast(1.05);
+}
+
+/* Filter strip item wrapper + delete button */
+.filter-strip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.filter-del-btn {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: #888;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.filter-edit-mode .filter-del-btn,
+.filter-del-btn:hover {
+  opacity: 1;
+  color: #c00;
+}
+.filter-comma {
+  margin-right: 4px;
+}
+
+/* Image picker modal for "add images" on filter pages */
+.filter-picker-overlay .picker-grid {
+  max-height: 50vh;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+  padding: 6px;
+  border-top: 1px solid #555;
+  border-bottom: 1px solid #555;
+}
+.picker-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.12s;
+}
+.picker-thumb:hover { border-color: #888; }
+.picker-thumb.picker-selected { border-color: #fff; }
+
+/* Dialog text input (reusable for filter naming) */
+.am-dialog-input {
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 6px 8px;
+  background: #000;
+  color: #fff;
+  border: 1px solid #666;
+  font-family: var(--mono), 'IBM Plex Mono', monospace;
+  font-size: var(--body-size);
+  box-sizing: border-box;
+}
+.am-dialog-input:focus {
+  outline: none;
+  border-color: #fff;
+}

@@ -285,6 +285,105 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       return json({ ok: true, results });
     }
 
+    // ---- save-filters: persist filter definitions -------------------------
+    // Writes the full filter array (from the in-page editor) back to:
+    //   1) src/data/couplingFilters.ts on GitHub (triggers Cloudflare rebuild)
+    //   2) live/filters.json on R2 (instant preview before rebuild)
+    if (body.action === "save-filters") {
+      const filters = body.filters as Array<{ slug: string; label: string; images: string[] }>;
+      const tsContent = body.tsContent as string;
+
+      if (!env.GITHUB_PAT) return json({ error: "server missing GITHUB_PAT" }, 500);
+      const repo = env.GITHUB_REPO || "hanknife/atelier-modulus-website";
+      const gh = `https://api.github.com/repos/${repo}`;
+      const headers = {
+        "User-Agent": "Atelier-Modulus-Editor/1.0",
+        Authorization: `Bearer ${env.GITHUB_PAT}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      };
+
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const refRes = await fetch(`${gh}/git/refs/heads/main`, { headers });
+          if (!refRes.ok) return json({ error: `ref ${refRes.status}` }, 500);
+          const refData = (await refRes.json()) as { object: { sha: string } };
+          const baseCommitSha = refData.object.sha;
+
+          const commitRes = await fetch(`${gh}/git/commits/${baseCommitSha}`, { headers });
+          if (!commitRes.ok) return json({ error: `commit ${commitRes.status}` }, 500);
+          const commitData = (await commitRes.json()) as { tree: { sha: string } };
+          const baseTreeSha = commitData.tree.sha;
+
+          // Write the TS source for couplingFilters
+          const blobRes = await fetch(`${gh}/git/blobs`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ content: b64encode(tsContent), encoding: "base64" }),
+          });
+          if (!blobRes.ok) return json({ error: `blob ${blobRes.status}: ${await blobRes.text()}` }, 500);
+          const blobData = (await blobRes.json()) as { sha: string };
+
+          const treeEntries = [
+            { path: "src/data/couplingFilters.ts", mode: "100644", type: "blob", sha: blobData.sha },
+          ];
+
+          const treeRes = await fetch(`${gh}/git/trees`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries }),
+          });
+          if (!treeRes.ok) {
+            if (treeRes.status === 422 && attempt === 0) continue;
+            return json({ error: `tree ${treeRes.status}: ${await treeRes.text()}` }, 422);
+          }
+          const treeData = (await treeRes.json()) as { sha: string };
+
+          const filterLabels = filters.map(f => f.label).join(", ") || "(empty)";
+          const newCommitRes = await fetch(`${gh}/git/commits`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              message: `update filters: [${filterLabels}]`,
+              tree: treeData.sha,
+              parents: [baseCommitSha],
+            }),
+          });
+          if (!newCommitRes.ok) return json({ error: `commit ${newCommitRes.status}` }, 500);
+          const newCommitData = (await newCommitRes.json()) as { sha: string };
+
+          const updateRes = await fetch(`${gh}/git/refs/heads/main`, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ sha: newCommitData.sha, force: false }),
+          });
+          if (!updateRes.ok) {
+            if (updateRes.status === 422 && attempt === 0) continue;
+            return json({ error: `ref-update ${updateRes.status}: ${await updateRes.text()}` }, 422);
+          }
+
+          // Write live/filters.json to R2 for instant preview.
+          if (env.EDITOR_BUCKET) {
+            try {
+              await env.EDITOR_BUCKET.put(
+                "live/filters.json",
+                JSON.stringify(filters),
+                { httpMetadata: { contentType: "application/json" } }
+              );
+            } catch { /* non-fatal */ }
+          }
+
+          return json({ ok: true, filters });
+        } catch (e: any) {
+          if (attempt === 0) continue;
+          return json({ error: String(e?.message ?? e) }, 500);
+        }
+      }
+
+      return json({ error: "max retries exceeded" }, 500);
+    }
+
     return json({ error: "unknown action" }, 400);
   } catch (e: any) {
     return json({ error: String(e?.message ?? e) }, 500);

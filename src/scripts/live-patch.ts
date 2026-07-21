@@ -52,6 +52,35 @@ async function patchLive() {
     });
     if (couplingDirty) window.dispatchEvent(new Event("resize"));
 
+    // Apply live filter overrides so newly created/edited filters appear
+    // instantly in the filter strip (before Cloudflare rebuild finishes).
+    const isCoupling = !!document.querySelector(".coupling-state:not(.filter-term)");
+    const isFilterTerm = !!document.querySelector(".filter-term");
+    if ((isCoupling || isFilterTerm) && map.filters && Array.isArray(map.filters)) {
+      const strip = document.querySelector<HTMLElement>(".filter-strip");
+      if (strip) {
+        // Remove any previously added dynamic items
+        strip.querySelectorAll<HTMLElement>(".filter-strip-item").forEach(el => el.remove());
+        for (const f of map.filters as Array<{ slug: string; label: string }>) {
+          // Only add if not already server-rendered (avoid duplicates)
+          if (!strip.querySelector(`[data-filter-slug="${f.slug}"]`)) {
+            const wrapper = document.createElement("span");
+            wrapper.className = "filter-strip-item";
+            wrapper.dataset.filterSlug = f.slug;
+            const link = document.createElement("a");
+            link.href = `/filter/${f.slug}/`;
+            link.textContent = f.label;
+            const sep = document.createElement("span");
+            sep.className = "filter-comma";
+            sep.textContent = ", ";
+            wrapper.appendChild(link);
+            wrapper.appendChild(sep);
+            strip.appendChild(wrapper);
+          }
+        }
+      }
+    }
+
     // Apply live info-text overrides so the public Info page reflects edits
     // instantly, without waiting for the Cloudflare rebuild. Scoped to the
     // server-rendered .info-collage so we never touch the editor's hidden

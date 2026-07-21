@@ -4,9 +4,10 @@ import { couplingFilters } from "../data/couplingFilters";
 
 <aside class="filter-strip" id="filter" aria-label="Active filters">
   {couplingFilters.map((filter, index) => (
-    <>
+    <span class="filter-strip-item" data-filter-slug={filter.slug}>
       <a href={`/filter/${filter.slug}/`}>{filter.label}</a>
-      {index < couplingFilters.length - 1 && <span>, </span>}
-    </>
+      <span class="filter-comma">{index < couplingFilters.length - 1 ? ", " : ""}</span>
+      <span class="filter-del-btn" title="删除此 Filter" style="display:none;">×</span>
+    </span>
   ))}
 </aside>
