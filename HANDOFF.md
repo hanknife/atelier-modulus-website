@@ -172,7 +172,7 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交（main HEAD）：`35b19fb`（ci: generalize pre-whitespace guard）。本会话新增本地 commit `62a3c18`（feat(coupling): coupling 瀑布流全项目图片动态化 + 编辑器封面更新 live-sync），**已本地 commit、尚未 push**（本沙箱无 write-scoped GitHub PAT；按项目规则不主动 push）。历史：info 相关 `b077e5f` + `61efd19` 已 push 且线上部署（含 info 文本 R2 即时预览 + 前导空格双重修复 + 防回潮自动体检）。更早相关提交：`fb1f98c`（merge）/ `702546d` / `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复）。
+- 最新提交（main HEAD）：`1eef359`（feat(coupling): split preview/management URLs + fix dead filter editor）。本会话修复 coupling/filter 预览与管理 URL 混用问题，并重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）。已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
