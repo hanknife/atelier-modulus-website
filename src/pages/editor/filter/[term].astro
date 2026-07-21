@@ -1,0 +1,40 @@
+---
+// Dedicated Filter management page (separate URL from the public preview at
+// /filter/[slug]/). Loads the filter-edit script, which auto-enters edit mode
+// on load (password-gated). Footer "PREVIEW" returns to the read-only preview.
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import ProjectDetailOverlays from "../../../components/ProjectDetailOverlays.astro";
+import CouplingFilterStrip from "../../../components/CouplingFilterStrip.astro";
+import CouplingBoard from "../../../components/CouplingBoard.astro";
+import { couplingFilters } from "../../../data/couplingFilters";
+import { getImageMeta, getAllCouplingItems } from "../../../lib/coupling";
+
+export const getStaticPaths = (() => {
+  return couplingFilters.map((filter) => ({
+    params: { term: filter.slug },
+    props: { filter }
+  }));
+}) satisfies GetStaticPaths;
+
+const { filter } = Astro.props;
+const boardItems = await getImageMeta(filter.images);
+// All images across all projects — used by the filter-page editor's "add image"
+// picker so users can pull from any project image into this filter.
+const allBoardImages = (await getAllCouplingItems()).map((item) => item.image);
+---
+
+<BaseLayout
+  title={`${filter.label} / Atelier Modulus — Editor`}
+  bodyClass="coupling-state filter-open filter-term filter-manage"
+  footerLeftLabel="← PREVIEW"
+  footerLeftHref={`/filter/${filter.slug}/`}
+  showInfo={false}
+>
+  <script type="application/json" id="filter-data" set:html={JSON.stringify(couplingFilters)}></script>
+  <script type="application/json" id="board-images" set:html={JSON.stringify(allBoardImages)}></script>
+  <ProjectDetailOverlays />
+  <CouplingFilterStrip />
+  <CouplingBoard items={boardItems} />
+  <script is:inline src="/filter-edit.js"></script>
+</BaseLayout>

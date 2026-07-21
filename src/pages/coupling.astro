@@ -11,22 +11,15 @@ import { couplingFilters } from "../data/couplingFilters";
 // content collection. Adding, replacing, or reordering images in any project
 // (via the editor) shows up here automatically on the next build.
 const boardItems = await getAllCouplingItems();
-// Embed data for the client-side filter editor: all board image URLs and the
-// current static filter definitions (so the editor can merge with local overrides).
-const boardImageUrls = boardItems.map(item => item.image);
 ---
 
 <BaseLayout
   title="Coupling / Atelier Modulus"
   bodyClass="coupling-state"
   footerLeftLabel="FILTER"
-  footerLeftHref="#enter-filter-edit"
-  footerLeftToggle=""
+  footerLeftHref="/editor/coupling/"
 >
-  <script type="application/json" id="filter-data">{JSON.stringify(couplingFilters)}</script>
-  <script type="application/json" id="board-images">{JSON.stringify(boardImageUrls)}</script>
   <ProjectDetailOverlays />
   <CouplingFilterStrip />
   <CouplingBoard items={boardItems} />
-  <script is:inline src="/filter-edit.js"></script>
 </BaseLayout>

@@ -1,10 +1,13 @@
-// Filter editing for Atelier Modulus — loaded on /coupling/ and /filter/[slug]/.
+// Filter editing for Atelier Modulus — loaded ONLY on the dedicated management
+// pages (/editor/coupling/ and /editor/filter/[slug]/). The public preview pages
+// (/coupling/ and /filter/[slug]/) do NOT load this script, so preview and
+// management are fully separated URLs.
 //
-// On /coupling/:
-//   Enter "filter edit mode" → click tiles to multi-select → "Create Filter"
-//   → name dialog → API save → new filter appears instantly in strip.
+// On /editor/coupling/:
+//   Enter edit mode (password prompt) → click tiles to multi-select →
+//   "Create Filter" → name dialog → API save → new filter appears in strip.
 //
-// On /filter/[slug]/:
+// On /editor/filter/[slug]/:
 //   Enter edit mode → click tiles to remove (with confirmation) → "Add Images"
 //   to pick from all project images → API save.
 
@@ -35,23 +38,23 @@ function askText(msg, placeholder = "") {
     const overlay = document.createElement("div");
     overlay.className = "am-dialog-overlay";
     overlay.innerHTML =
-      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
-        <p class="am-dialog-msg">${msg}</p>
-        <input class="am-dialog-input" type="text" placeholder="${placeholder}" autocomplete="off" />
-        <div class="am-dialog-actions">
-          <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
-          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
-        </div>
-      </div>`;
+      '<div class="am-dialog-box" role="alertdialog" aria-modal="true">' +
+        '<p class="am-dialog-msg">' + msg + '</p>' +
+        '<input class="am-dialog-input" type="text" placeholder="' + placeholder + '" autocomplete="off" />' +
+        '<div class="am-dialog-actions">' +
+          '<button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>' +
+          '<button class="am-dialog-btn am-dialog-ok" type="button">确定</button>' +
+        '</div>' +
+      '</div>';
     document.body.appendChild(overlay);
-    const input = overlay.querySelector(".am-dialog-input")!;
-    const ok = overlay.querySelector(".am-dialog-ok")!;
-    const cancel = overlay.querySelector(".am-dialog-cancel")!;
-    const close = (r? | null) => { overlay.remove(); resolve(r ?? null); };
+    const input = overlay.querySelector(".am-dialog-input");
+    const ok = overlay.querySelector(".am-dialog-ok");
+    const cancel = overlay.querySelector(".am-dialog-cancel");
+    const close = (r) => { overlay.remove(); resolve(r == null ? null : r); };
     ok.addEventListener("click", () => close(input.value.trim() || null));
     cancel.addEventListener("click", () => close(null));
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(null); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(null); }, { once);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(null); }, { once: true });
     setTimeout(() => input.focus(), 50);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") close(input.value.trim() || null); });
   });
@@ -62,21 +65,21 @@ function showDialog(msg) {
     const overlay = document.createElement("div");
     overlay.className = "am-dialog-overlay";
     overlay.innerHTML =
-      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
-        <p class="am-dialog-msg">${msg}</p>
-        <div class="am-dialog-actions">
-          <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
-          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
-        </div>
-      </div>`;
+      '<div class="am-dialog-box" role="alertdialog" aria-modal="true">' +
+        '<p class="am-dialog-msg">' + msg + '</p>' +
+        '<div class="am-dialog-actions">' +
+          '<button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>' +
+          '<button class="am-dialog-btn am-dialog-ok" type="button">确定</button>' +
+        '</div>' +
+      '</div>';
     document.body.appendChild(overlay);
-    const ok = overlay.querySelector(".am-dialog-ok")!;
-    const cancel = overlay.querySelector(".am-dialog-cancel")!;
+    const ok = overlay.querySelector(".am-dialog-ok");
+    const cancel = overlay.querySelector(".am-dialog-cancel");
     const close = (result) => { overlay.remove(); resolve(result); };
     ok.addEventListener("click", () => close(true));
     cancel.addEventListener("click", () => close(false));
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(false); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(false); }, { once);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(false); }, { once: true });
     setTimeout(() => ok.focus(), 50);
   });
 }
@@ -86,18 +89,18 @@ function showAlert(msg) {
     const overlay = document.createElement("div");
     overlay.className = "am-dialog-overlay";
     overlay.innerHTML =
-      `<div class="am-dialog-box" role="alertdialog" aria-modal="true">
-        <p class="am-dialog-msg">${msg}</p>
-        <div class="am-dialog-actions">
-          <button class="am-dialog-btn am-dialog-ok" type="button">确定</button>
-        </div>
-      </div>`;
+      '<div class="am-dialog-box" role="alertdialog" aria-modal="true">' +
+        '<p class="am-dialog-msg">' + msg + '</p>' +
+        '<div class="am-dialog-actions">' +
+          '<button class="am-dialog-btn am-dialog-ok" type="button">确定</button>' +
+        '</div>' +
+      '</div>';
     document.body.appendChild(overlay);
-    const ok = overlay.querySelector(".am-dialog-ok")!;
+    const ok = overlay.querySelector(".am-dialog-ok");
     const close = () => { overlay.remove(); resolve(); };
     ok.addEventListener("click", close);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); }, { once);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); }, { once: true });
     setTimeout(() => ok.focus(), 50);
   });
 }
@@ -117,11 +120,12 @@ function slugify(label) {
 
 // ---- Local persistence ----------------------------------------------------
 
-
 function loadFilters() {
   try {
     return JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-  } catch { return []; }
+  } catch (e) {
+    return [];
+  }
 }
 
 function persistFilters(filters) {
@@ -134,31 +138,38 @@ function getStaticFilters() {
   try {
     const el = document.getElementById("filter-data");
     return el ? JSON.parse(el.textContent || "[]") : [];
-  } catch { return []; }
+  } catch (e) {
+    return [];
+  }
 }
 
 // Get all available images on this page's coupling board.
 // Embedded as JSON in <script id="board-images">.
-function getBoardImages()[] {
+function getBoardImages() {
   try {
     const el = document.getElementById("board-images");
     return el ? JSON.parse(el.textContent || "[]") : [];
-  } catch { return []; }
+  } catch (e) {
+    return [];
+  }
 }
 
-// Merge) + local overrides (newly created/deleted ones).
+// Merge static filters + local overrides (newly created/deleted ones).
 // Local takes precedence for slugs that exist in both.
 function mergedFilters() {
   const staticFilters = getStaticFilters();
   const localFilters = loadFilters();
   // Track which static slugs have been deleted locally.
-  const deletedSlugs = new Set(localFilters.filter(f => f.images === "__DELETED__").map(f => f.slug));
-  const result = staticFilters.filter(f => !deletedSlugs.has(f.slug));
+  const deletedSlugs = new Set(
+    localFilters.filter((f) => f.images === "__DELETED__").map((f) => f.slug)
+  );
+  const result = staticFilters.filter((f) => !deletedSlugs.has(f.slug));
   // Append or update with local additions/edits.
   for (const lf of localFilters) {
     if (lf.images === "__DELETED__") continue; // already handled
-    const idx = result.findIndex(r => r.slug === lf.slug);
-    if (idx >= 0) result[idx] = lf; else result.push(lf);
+    const idx = result.findIndex((r) => r.slug === lf.slug);
+    if (idx >= 0) result[idx] = lf;
+    else result.push(lf);
   }
   return result;
 }
@@ -167,19 +178,23 @@ function mergedFilters() {
 
 async function saveFiltersToServer(filters) {
   const pass = getPassSync();
-  if (!pass) { await showAlert("需要编辑密码"); return false; }
+  if (!pass) {
+    await showAlert("需要编辑密码");
+    return false;
+  }
   try {
     // Serialize filters as the content of src/data/couplingFilters.ts so that
     // the next Cloudflare rebuild picks them up automatically.
     const tsContent = buildFiltersTS(filters);
     const res = await fetch(API, {
-      method,
-      headers,
-      body,
-        filters,
-        tsContent,
-        passcode,
-      }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "save-filters",
+        filters: filters,
+        tsContent: tsContent,
+        passcode: pass
+      })
     });
     const data = await res.json();
     if (!res.ok || !data.ok) {
@@ -198,21 +213,21 @@ async function saveFiltersToServer(filters) {
 function buildFiltersTS(filters) {
   const lines = [
     "export interface CouplingFilter {",
-    "  slug;",
-    "  label;",
-    "  images[];",
+    "  slug: string;",
+    "  label: string;",
+    "  images: string[];",
     "}",
     "",
     "// Curated coupling filter terms. Each term links to /filter/{slug}/ and shows",
     "// a filtered masonry of the images listed below.",
     "// Auto-generated by the in-page filter editor.",
-    "export const couplingFilters = [",
+    "export const couplingFilters = ["
   ];
   for (const f of filters) {
     lines.push("  {");
-    lines.push(`    slug)},`);
-    lines.push(`    label)},`);
-    lines.push(`    images)},`);
+    lines.push("    slug: " + JSON.stringify(f.slug) + ",");
+    lines.push("    label: " + JSON.stringify(f.label) + ",");
+    lines.push("    images: " + JSON.stringify(f.images) + ",");
     lines.push("  },");
   }
   lines.push("];");
@@ -220,7 +235,9 @@ function buildFiltersTS(filters) {
   return lines.join("\n");
 }
 
-// ---- Coupling-page= new Set();
+// ---- Coupling-page selection state ----------------------------------------
+
+const selectedImages = new Set();
 
 function toggleSelectTile(tile) {
   const img = tile.querySelector("img");
@@ -243,25 +260,28 @@ function updateSelectionCount() {
 
 function clearSelection() {
   selectedImages.clear();
-  document.querySelectorAll(".coupling-tile.filter-selected").forEach(t => t.classList.remove("filter-selected"));
+  document.querySelectorAll(".coupling-tile.filter-selected").forEach((t) => t.classList.remove("filter-selected"));
   updateSelectionCount();
 }
 
 async function createNewFilter() {
-  if (selectedImages.size === 0) { await showAlert("请先选择至少一张图片"); return; }
+  if (selectedImages.size === 0) {
+    await showAlert("请先选择至少一张图片");
+    return;
+  }
   const name = await askText("给这个 Filter 起个名称：", "例如 Circle-Square-Circle");
   if (!name) return;
 
   const slug = slugify(name);
   // Check duplicate slug
   const existing = mergedFilters();
-  if (existing.some(f => f.slug === slug)) {
-    await showAlert("已存在同名的 Filter（slug);
+  if (existing.some((f) => f.slug === slug)) {
+    await showAlert("已存在同名的 Filter（slug: " + slug + "）");
     return;
   }
 
   const images = Array.from(selectedImages);
-  const newFilter= { slug, label, images };
+  const newFilter = { slug: slug, label: name, images: images };
 
   // Save locally first (instant UI)
   const local = loadFilters();
@@ -287,7 +307,7 @@ async function createNewFilter() {
 async function deleteFilter(slug, label) {
   if (!(await showDialog("删除 Filter「" + label + "」？"))) return;
   const local = loadFilters();
-  local.push({ slug, label, images); // tombstone
+  local.push({ slug: slug, label: label, images: "__DELETED__" }); // tombstone
   persistFilters(local);
 
   const ok = await saveFiltersToServer(mergedFilters());
@@ -298,20 +318,24 @@ async function deleteFilter(slug, label) {
   }
 
   // Remove from strip
-  document.querySelectorAll(".filter-strip-item").forEach(el => {
+  document.querySelectorAll(".filter-strip-item").forEach((el) => {
     if (el.dataset.filterSlug === slug) el.remove();
   });
 }
 
 // Append a new filter link to the strip (after the last existing one).
-function appendFilterToStrip(filter) {
+// `hrefPrefix` lets the coupling management page point each filter at its own
+// edit page (/editor/filter/[slug]/) instead of the public preview.
+function appendFilterToStrip(filter, hrefFor) {
   const strip = document.querySelector(".filter-strip");
   if (!strip) return;
   // Check if already present
-  if (strip.querySelector(`[data-filter-slug="${filter.slug}"]`)) return;
+  if (strip.querySelector('[data-filter-slug="' + filter.slug + '"]')) return;
   // Find position after the last existing <a> to insert new items
   const comma = strip.querySelector(".filter-sep-last");
   if (comma) { comma.remove(); }
+
+  const href = hrefFor ? hrefFor(filter.slug) : ("/filter/" + filter.slug + "/");
 
   // Build new item
   const wrapper = document.createElement("span");
@@ -319,7 +343,7 @@ function appendFilterToStrip(filter) {
   wrapper.dataset.filterSlug = filter.slug;
 
   const link = document.createElement("a");
-  link.href = `/filter/${filter.slug}/`;
+  link.href = href;
   link.textContent = filter.label;
 
   const sep = document.createElement("span");
@@ -344,16 +368,18 @@ function appendFilterToStrip(filter) {
 }
 
 // Rebuild entire strip from merged data (used on init).
-function rebuildStripFromMerged() {
+function rebuildStripFromMerged(hrefFor) {
   const filters = mergedFilters();
   // Clear dynamic items (keep server-rendered ones)
-  document.querySelectorAll(".filter-strip-item").forEach(el => el.remove());
+  document.querySelectorAll(".filter-strip-item").forEach((el) => el.remove());
   for (const f of filters) {
-    appendFilterToStrip(f);
+    appendFilterToStrip(f, hrefFor);
   }
 }
 
-// ---- Filter-page= new Set();
+// ---- Filter-page removal state --------------------------------------------
+
+const removedImages = new Set();
 
 function isOnFilterPage() {
   return !!document.querySelector(".filter-term");
@@ -382,12 +408,12 @@ async function showAddPicker() {
   if (!currentFilterSlug) return;
 
   const currentFilters = mergedFilters();
-  const current = currentFilters.find(f => f.slug === currentFilterSlug);
+  const current = currentFilters.find((f) => f.slug === currentFilterSlug);
   if (!current) return;
 
   const allImages = getBoardImages();
   const currentSet = new Set(current.images);
-  const available = allImages.filter(img => !currentSet.has(img));
+  const available = allImages.filter((img) => !currentSet.has(img));
 
   if (available.length === 0) {
     await showAlert("所有图片都已在当前 Filter 中了");
@@ -398,29 +424,29 @@ async function showAddPicker() {
   const overlay = document.createElement("div");
   overlay.className = "am-dialog-overlay filter-picker-overlay";
   // Show a grid of thumbnails
-  const thumbs = available.slice(0, 60).map(url =>
-    `<img class="picker-thumb" src="${url}" data-src="${url}" alt="" loading="lazy" />`
+  const thumbs = available.slice(0, 60).map((url) =>
+    '<img class="picker-thumb" src="' + url + '" data-src="' + url + '" alt="" loading="lazy" />'
   ).join("");
 
   overlay.innerHTML =
-    `<div class="am-dialog-box filter-picker-box" role="dialog" aria-modal="true">
-      <p class="am-dialog-msg">点击选择要添加的图片（已选：<span id="picker-count">0</span>）</p>
-      <div class="picker-grid">${thumbs}</div>
-      <div class="am-dialog-actions">
-        <button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>
-        <button class="am-dialog-btn am-dialog-ok" type="button">添加选中</button>
-      </div>
-    </div>`;
+    '<div class="am-dialog-box filter-picker-box" role="dialog" aria-modal="true">' +
+      '<p class="am-dialog-msg">点击选择要添加的图片（已选：<span id="picker-count">0</span>）</p>' +
+      '<div class="picker-grid">' + thumbs + '</div>' +
+      '<div class="am-dialog-actions">' +
+        '<button class="am-dialog-btn am-dialog-cancel" type="button">取消</button>' +
+        '<button class="am-dialog-btn am-dialog-ok" type="button">添加选中</button>' +
+      '</div>' +
+    '</div>';
   document.body.appendChild(overlay);
 
   const pickerSet = new Set();
-  const countEl = overlay.querySelector("#picker-count")!;
-  const grid = overlay.querySelector(".picker-grid")!;
+  const countEl = overlay.querySelector("#picker-count");
+  const grid = overlay.querySelector(".picker-grid");
 
   grid.addEventListener("click", (e) => {
-    const thumb = (e.target).closest(".picker-thumb");
+    const thumb = e.target.closest(".picker-thumb");
     if (!thumb) return;
-    const src = thumb.dataset.src!;
+    const src = thumb.dataset.src;
     if (pickerSet.has(src)) {
       pickerSet.delete(src);
       thumb.classList.remove("picker-selected");
@@ -431,22 +457,23 @@ async function showAddPicker() {
     countEl.textContent = String(pickerSet.size);
   });
 
-  const ok = overlay.querySelector(".am-dialog-ok")!;
-  const cancel = overlay.querySelector(".am-dialog-cancel")!;
+  const ok = overlay.querySelector(".am-dialog-ok");
+  const cancel = overlay.querySelector(".am-dialog-cancel");
   const closeFn = (add) => {
     overlay.remove();
     if (add && pickerSet.size > 0) {
       // Add selected images to the filter
-      const updated = [...current.images, ...Array.from(pickerSet)];
+      const updated = current.images.concat(Array.from(pickerSet));
       current.images = updated;
       // Persist locally
       const local = loadFilters();
-      const idx = local.findIndex(l => l.slug === currentFilterSlug);
-      if (idx >= 0) local[idx] = current; else local.push(current);
+      const idx = local.findIndex((l) => l.slug === currentFilterSlug);
+      if (idx >= 0) local[idx] = current;
+      else local.push(current);
       persistFilters(local);
       // Server save
-      saveFiltersToServer(mergedFilters()).then(ok => {
-        if (ok) {
+      saveFiltersToServer(mergedFilters()).then((okSaved) => {
+        if (okSaved) {
           // Refresh the board visually by appending new tiles
           appendNewTilesToBoard(pickerSet);
           clearRemovedState();
@@ -457,15 +484,13 @@ async function showAddPicker() {
   ok.addEventListener("click", () => closeFn(true));
   cancel.addEventListener("click", () => closeFn(false));
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeFn(false); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeFn(false); }, { once);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeFn(false); }, { once: true });
 }
 
-function getCurrentFilterSlug() | null {
-  // Read from the embedded data
-  try {
-    const el = document.getElementById("current-filter-slug");
-    return el?.textContent || null;
-  } catch { return null }
+function getCurrentFilterSlug() {
+  // Derive the slug from the management URL (/editor/filter/[slug]/).
+  const m = location.pathname.match(/\/filter\/([^/]+)\/?$/);
+  return m ? m[1] : null;
 }
 
 function appendNewTilesToBoard(newSrcs) {
@@ -477,7 +502,7 @@ function appendNewTilesToBoard(newSrcs) {
   for (const src of newSrcs) {
     const size = SIZE_PATTERN[startIdx % SIZE_PATTERN.length];
     const fig = document.createElement("figure");
-    fig.className = `coupling-tile tile-${startIdx + 1} size-${size}`;
+    fig.className = "coupling-tile tile-" + (startIdx + 1) + " size-" + size;
     fig.dataset.size = String(size);
     fig.dataset.detailCover = ""; // gallery image, not cover
     const img = document.createElement("img");
@@ -496,18 +521,19 @@ async function saveFilterChanges() {
   const slug = getCurrentFilterSlug();
   if (!slug) return;
   const filters = mergedFilters();
-  const f = filters.find(x => x.slug === slug);
+  const f = filters.find((x) => x.slug === slug);
   if (!f) return;
 
   // Apply removals
   if (removedImages.size > 0) {
-    f.images = f.images.filter(img => !removedImages.has(img));
+    f.images = f.images.filter((img) => !removedImages.has(img));
   }
 
   // Persist
   const local = loadFilters();
-  const idx = local.findIndex(l => l.slug === slug);
-  if (idx >= 0) local[idx] = f; else local.push(f);
+  const idx = local.findIndex((l) => l.slug === slug);
+  if (idx >= 0) local[idx] = f;
+  else local.push(f);
   persistFilters(local);
 
   // Server
@@ -522,7 +548,7 @@ async function saveFilterChanges() {
 
 function clearRemovedState() {
   removedImages.clear();
-  document.querySelectorAll(".coupling-tile").forEach(t => {
+  document.querySelectorAll(".coupling-tile").forEach((t) => {
     t.style.opacity = "";
     t.style.pointerEvents = "";
   });
@@ -536,10 +562,13 @@ function enterFilterEdit() {
   if (!pass) return;
   document.body.classList.add(EDIT_CLASS);
 
+  // Wire up tile selection / removal + strip links for the active page type.
+  // (These were defined but never invoked in the original script — without
+  // this call the edit interactions would never attach.)
   if (isOnFilterPage()) {
-    // Filter page);
+    setupFilterPageEdit();
   } else {
-    // Coupling page);
+    setupCouplingPageEdit();
   }
 
   const bar = document.getElementById("filter-edit-bar");
@@ -551,7 +580,7 @@ function exitFilterEdit() {
   clearSelection();
   clearRemovedState();
   // Restore tile visuals
-  document.querySelectorAll(".coupling-tile.filter-selected").forEach(t =>
+  document.querySelectorAll(".coupling-tile.filter-selected").forEach((t) =>
     t.classList.remove("filter-selected")
   );
 
@@ -568,7 +597,7 @@ function setupCouplingPageEdit() {
 
   board.addEventListener("click", (e) => {
     if (!document.body.classList.contains(EDIT_CLASS)) return;
-    const tile = (e.target).closest(".coupling-tile");
+    const tile = e.target.closest(".coupling-tile");
     if (tile) {
       e.stopPropagation();
       e.preventDefault();
@@ -577,20 +606,24 @@ function setupCouplingPageEdit() {
   }, true); // capture phase to intercept before overlay handler
 
   // Show delete buttons on existing filters in strip
-  document.querySelectorAll(".filter-strip-item .filter-del-btn").forEach(btn => {
+  document.querySelectorAll(".filter-strip-item .filter-del-btn").forEach((btn) => {
     btn.style.display = "";
   });
 
-  rebuildStripFromMerged();
+  rebuildStripFromMerged((slug) => "/editor/filter/" + slug + "/");
 }
 
 function setupFilterPageEdit() {
   const board = document.querySelector(".coupling-board");
   if (!board) return;
 
+  // Point the strip at each filter's management page so navigating filters
+  // from within management stays in management.
+  rebuildStripFromMerged((slug) => "/editor/filter/" + slug + "/");
+
   board.addEventListener("click", (e) => {
     if (!document.body.classList.contains(EDIT_CLASS)) return;
-    const tile = (e.target).closest(".coupling-tile");
+    const tile = e.target.closest(".coupling-tile");
     if (tile) {
       e.stopPropagation();
       e.preventDefault();
@@ -609,29 +642,29 @@ function buildUI() {
   bar.hidden = true;
 
   if (isFilter) {
-    bar.innerHTML = `
-      <span class="filter-edit-label">编辑此 Filter</span>
-      <button id="fe-add-img" type="button">+ 添加图片</button>
-      <button id="fe-save" type="button">保存更改 (<span id="filter-remove-count">0</span> 删除)</button>
-      <button id="fe-exit" type="button">退出</button>`;
+    bar.innerHTML =
+      '<span class="filter-edit-label">编辑此 Filter</span>' +
+      '<button id="fe-add-img" type="button">+ 添加图片</button>' +
+      '<button id="fe-save" type="button">保存更改 (<span id="filter-remove-count">0</span> 删除)</button>' +
+      '<button id="fe-exit" type="button">退出</button>';
   } else {
-    bar.innerHTML = `
-      <span class="filter-edit-label">编辑 Filters</span>
-      <button id="fe-create" type="button">新建 Filter (<span id="filter-sel-count">0</span>)</button>
-      <button id="fe-exit" type="button">退出</button>`;
+    bar.innerHTML =
+      '<span class="filter-edit-label">编辑 Filters</span>' +
+      '<button id="fe-create" type="button">新建 Filter (<span id="filter-sel-count">0</span>)</button>' +
+      '<button id="fe-exit" type="button">退出</button>';
   }
 
   document.body.appendChild(bar);
 
-  bar.querySelector("#fe-exit")!.addEventListener("click", () => {
+  bar.querySelector("#fe-exit").addEventListener("click", () => {
     exitFilterEdit();
   });
 
   if (isFilter) {
-    bar.querySelector("#fe-add-img")!.addEventListener("click", showAddPicker);
-    bar.querySelector("#fe-save")!.addEventListener("click", saveFilterChanges);
+    bar.querySelector("#fe-add-img").addEventListener("click", showAddPicker);
+    bar.querySelector("#fe-save").addEventListener("click", saveFilterChanges);
   } else {
-    bar.querySelector("#fe-create")!.addEventListener("click", createNewFilter);
+    bar.querySelector("#fe-create").addEventListener("click", createNewFilter);
   }
 }
 
@@ -639,9 +672,9 @@ function buildUI() {
 
 buildUI();
 
-// If there's an #enter-filter-edit hash, auto-enter
-if (location.hash === "#enter-filter-edit") {
-  location.hash = "";
-  // Delay slightly to ensure DOM is ready
-  setTimeout(() => enterFilterEdit(), 100);
+// Auto-enter edit mode on the dedicated management pages (/editor/coupling/
+// and /editor/filter/[slug]/). These pages are server-marked with the
+// `filter-manage` body class; the password prompt gates access.
+if (document.body.classList.contains("filter-manage")) {
+  setTimeout(() => enterFilterEdit(), 150);
 }

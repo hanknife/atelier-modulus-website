@@ -117,6 +117,17 @@
     - **Filter 删除**：编辑模式下每个 filter 旁显示 × 按钮，点击确认后删除。
     - 数据持久化：localStorage 会话级缓存 + GitHub 持久化 + R2 即时预览。`global.css` 追加编辑 UI 样式（工具栏、选中态、删除按钮、选择器网格）。
 
+### 预览态与管理态 URL 分离 + Filter 编辑器修复（本会话）
+
+28. **Coupling / Filter 预览与管理拆分为独立 URL（修复「点击 FILTER 无反应」）**：
+    - **根因 1（死脚本）**：`public/filter-edit.js` 被写成 TypeScript（`!` 非空断言、`| null`、`images[]:` 等），但置于 `public/` 下由 `<script is:inline src>` 原样提供、Astro 不转译。浏览器解析即抛 `SyntaxError`，整段脚本不执行 → 点击 FILTER 毫无反应（连密码框都不弹）。`node --check` 可复现。
+    - **根因 2（交互未绑定）**：原脚本里 `setupCouplingPageEdit()` / `setupFilterPageEdit()` 定义了却从未被调用，tile 点击选择 / strip 重建 / 删除按钮绑定都不会生效。已接入 `enterFilterEdit()`。
+    - **根因 3（保存必败）**：原 `fetch` 的 `method / headers / body` 是未定义变量，且缺 `action: "save-filters"` 字段，后端永远回 `unknown action`。已改为合法 `fetch(API,{method:"POST",headers,body:JSON.stringify({action:"save-filters",filters,tsContent,passcode})})`。
+    - **根因 4（数据传空）**：Astro **不会**求值 `<script type="application/json">{JSON.stringify(x)}</script>` 内的表达式——原 `filter-data` / `board-images` / `current-filter-slug` 输出的是字面量模板，编辑器读到的永远是 `[]` / `null`。管理页改用 `set:html` 注入求值后的 JSON；`getCurrentFilterSlug()` 改为从 URL 派生，不再依赖脚本。
+    - **URL 分离（问题 2）**：预览 `/coupling/`、`/filter/[slug]/` 不再加载 `filter-edit.js`（保持纯净只读）；新增独立管理页 `/editor/coupling/`（多选建 Filter、删 Filter）与 `/editor/filter/[slug]/`（增删图）。二者带 `filter-manage` body 标记、加载 `filter-edit.js` 并在加载时自动进入编辑态（密码门控）；管理页 strip 链接指向 `/editor/filter/[slug]/`。`coupling.astro` 的 FILTER 页脚改为链接 `/editor/coupling/`。
+    - 红线：仅改 `coupling.astro` / `filter/[term].astro`（高危，本会话改动已在该清单内确认）、新增 `editor/coupling.astro` 与 `editor/filter/[term].astro`、`global.css` / `ProjectCard.astro` 未动（耦合墙逻辑 `/CouplingBoard.astro` 原样复用）。
+    - 验证：`pnpm build` 24 页通过；Playwright 实测预览不加载脚本、管理页自动进入编辑态、tile 可选中、strip 指向管理 URL、零控制台错误；无横向滚动/重叠/裁切回归。`
+
 ---
 
 ## 5. Overlay 菜单排序规则（第 2、6、8 条的具体落地）
@@ -168,7 +179,7 @@
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**新增 Filter 编辑器**（commit `65513e8`）：coupling 页可多选 tile 创建新 filter；filter 页可增删图；数据走 GitHub（持久化）+ R2（即时）。详见 §4 条目 27。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。详见 §4 条目 27、28。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---

@@ -5,7 +5,7 @@ import ProjectDetailOverlays from "../../components/ProjectDetailOverlays.astro"
 import CouplingFilterStrip from "../../components/CouplingFilterStrip.astro";
 import CouplingBoard from "../../components/CouplingBoard.astro";
 import { couplingFilters } from "../../data/couplingFilters";
-import { getImageMeta, getAllCouplingItems } from "../../lib/coupling";
+import { getImageMeta } from "../../lib/coupling";
 
 export const getStaticPaths = (() => {
   return couplingFilters.map((filter) => ({
@@ -16,9 +16,6 @@ export const getStaticPaths = (() => {
 
 const { filter } = Astro.props;
 const boardItems = await getImageMeta(filter.images);
-// All images across all projects — used by the filter-page editor's "add image"
-// picker so users can pull from any project image into this filter.
-const allBoardImages = (await getAllCouplingItems()).map(item => item.image);
 ---
 
 <BaseLayout
@@ -28,11 +25,7 @@ const allBoardImages = (await getAllCouplingItems()).map(item => item.image);
   footerLeftHref="/coupling/"
   showInfo={false}
 >
-  <script type="application/json" id="filter-data">{JSON.stringify(couplingFilters)}</script>
-  <script type="application/json" id="board-images">{JSON.stringify(allBoardImages)}</script>
-  <script type="application/json" id="current-filter-slug">{JSON.stringify(filter.slug)}</script>
   <ProjectDetailOverlays />
   <CouplingFilterStrip />
   <CouplingBoard items={boardItems} />
-  <script is:inline src="/filter-edit.js"></script>
 </BaseLayout>

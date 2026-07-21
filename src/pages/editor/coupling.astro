@@ -1,0 +1,30 @@
+---
+// Dedicated Coupling management page (separate URL from the public preview at
+// /coupling/). Loads the filter-edit script, which auto-enters edit mode on
+// load (password-gated). Footer "PREVIEW" returns to the read-only preview.
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProjectDetailOverlays from "../../components/ProjectDetailOverlays.astro";
+import CouplingFilterStrip from "../../components/CouplingFilterStrip.astro";
+import CouplingBoard from "../../components/CouplingBoard.astro";
+import { getAllCouplingItems } from "../../lib/coupling";
+import { couplingFilters } from "../../data/couplingFilters";
+
+// Same data the public preview uses — every image from every project.
+const boardItems = await getAllCouplingItems();
+const boardImageUrls = boardItems.map((item) => item.image);
+---
+
+<BaseLayout
+  title="Coupling / Atelier Modulus — Editor"
+  bodyClass="coupling-state filter-open filter-manage"
+  footerLeftLabel="← PREVIEW"
+  footerLeftHref="/coupling/"
+  showInfo={false}
+>
+  <script type="application/json" id="filter-data" set:html={JSON.stringify(couplingFilters)}></script>
+  <script type="application/json" id="board-images" set:html={JSON.stringify(boardImageUrls)}></script>
+  <ProjectDetailOverlays />
+  <CouplingFilterStrip />
+  <CouplingBoard items={boardItems} />
+  <script is:inline src="/filter-edit.js"></script>
+</BaseLayout>
