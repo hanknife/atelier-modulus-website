@@ -109,6 +109,8 @@
 22. **JS masonry**：按图片实际渲染高度计算 `grid-row-end: span N`，实现真 masonry。
 23. **Filter 词条页复用**：`filter/[term].astro` 直接调用 `CouplingBoard`，与主页共用同一套 `.coupling-board` + masonry。
 24. **Filter 页眉对齐**：`filter-strip` 左对齐页脚 `FILTER`、在 42px 页眉区竖向居中（`display:flex; align-items:center`）。
+25. **Coupling 瀑布流改为「全项目图片」动态生成（commit `62a3c18`）**：原 `coupling.astro` 写死 16 张 R2 图（靠 `coupling.ts` 的 `manualImageOwners` 把 R2 URL 反查回 slug）。改为 `getAllCouplingItems()` 直接遍历全部 `projects` + `lehrgerueste`，把每个项目的 `cover_image` + 全部 `gallery` 产出为 `{image, slug, side, isCover}`，slug/side 在遍历时即得、不再依赖 URL 反查。`CouplingBoard.astro` 的 `Props` 由 `images: string[]` 改为 `items`，封面 tile 加 `data-detail-cover="cover"` 供 live-sync 定位。`filter/[term].astro` 仍走 `getImageMeta()`（行为不变）。效果：coupling 瀑布流 = 所有项目的全部图片，随 frontmatter 增减自动反映；点 tile 仍开对应详情 overlay。`global.css` / `ProjectCard.astro` 未动（红线，只追加不重写）。
+26. **Coupling 编辑器更新 live-sync（commit `62a3c18`）**：扩展 `live-patch.ts`，若本页存在 `.coupling-tile`，当 `/api/live` 返回某 slug 新封面时，更新该 slug 封面 tile 的 `img.src` 并 `dispatch resize` 触发 masonry 重排。即「每次更新后也同步更新到 coupling 里」：封面替换即时同步；gallery 增删走整站重建自动反映。
 
 ---
 
@@ -154,14 +156,14 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交：`b077e5f`（ci: add info leading-whitespace guard to build）+ `61efd19`（fix(info): absolute leading-whitespace guard for editor overlay + public page），**均已 push 到 GitHub main 且线上已部署**（含 info 文本 R2 即时预览 + 前导空格双重修复 + 防回潮自动体检）。更早相关提交：`fb1f98c`（merge）/ `702546d` / `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复）。
+- 最新提交（main HEAD）：`35b19fb`（ci: generalize pre-whitespace guard）。本会话新增本地 commit `62a3c18`（feat(coupling): coupling 瀑布流全项目图片动态化 + 编辑器封面更新 live-sync），**已本地 commit、尚未 push**（本沙箱无 write-scoped GitHub PAT；按项目规则不主动 push）。历史：info 相关 `b077e5f` + `61efd19` 已 push 且线上部署（含 info 文本 R2 即时预览 + 前导空格双重修复 + 防回潮自动体检）。更早相关提交：`fb1f98c`（merge）/ `702546d` / `01dedf2` / `b9ccf8c`（info 即时预览与前导空格修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：未改动，保持原状。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。`filter/[term]` 行为不变。`global.css` / `ProjectCard.astro` 未动（红线）。详见 §4 条目 25–26。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---
