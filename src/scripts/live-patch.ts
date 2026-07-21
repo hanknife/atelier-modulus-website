@@ -34,6 +34,24 @@ async function patchLive() {
       }
     });
 
+    // Keep the /coupling/ (and /filter/) waterfall in sync with editor cover
+    // swaps. When a slug's cover_image override arrives, swap that slug's
+    // cover tile to the new image, then recompute the masonry row spans once
+    // (the cover tile's aspect ratio may have changed).
+    let couplingDirty = false;
+    document.querySelectorAll<HTMLElement>(".coupling-tile[data-detail-cover='cover']").forEach((tile) => {
+      const slug = tile.dataset.detailSlug;
+      if (!slug) return;
+      const override = map[slug];
+      if (!override || !override.cover_image) return;
+      const img = tile.querySelector<HTMLImageElement>("img");
+      if (img && img.src !== override.cover_image) {
+        img.src = override.cover_image;
+        couplingDirty = true;
+      }
+    });
+    if (couplingDirty) window.dispatchEvent(new Event("resize"));
+
     // Apply live info-text overrides so the public Info page reflects edits
     // instantly, without waiting for the Cloudflare rebuild. Scoped to the
     // server-rendered .info-collage so we never touch the editor's hidden

@@ -5,6 +5,7 @@ import ProjectDetailOverlays from "../../components/ProjectDetailOverlays.astro"
 import CouplingFilterStrip from "../../components/CouplingFilterStrip.astro";
 import CouplingBoard from "../../components/CouplingBoard.astro";
 import { couplingFilters } from "../../data/couplingFilters";
+import { getImageMeta } from "../../lib/coupling";
 
 export const getStaticPaths = (() => {
   return couplingFilters.map((filter) => ({
@@ -14,6 +15,7 @@ export const getStaticPaths = (() => {
 }) satisfies GetStaticPaths;
 
 const { filter } = Astro.props;
+const boardItems = await getImageMeta(filter.images);
 ---
 
 <BaseLayout
@@ -25,5 +27,5 @@ const { filter } = Astro.props;
 >
   <ProjectDetailOverlays />
   <CouplingFilterStrip />
-  <CouplingBoard images={filter.images} />
+  <CouplingBoard items={boardItems} />
 </BaseLayout>

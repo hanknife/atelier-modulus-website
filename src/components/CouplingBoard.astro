@@ -1,12 +1,11 @@
 ---
-import { getImageMeta } from "../lib/coupling";
+import type { CouplingImageMeta } from "../lib/coupling";
 
 interface Props {
-  images: string[];
+  items: CouplingImageMeta[];
 }
 
-const { images } = Astro.props;
-const imageMeta = await getImageMeta(images);
+const { items } = Astro.props;
 const boardClass = "coupling-board";
 
 // Every source image shares a ~1.3 aspect ratio, so a by-ratio size mapping
@@ -18,7 +17,7 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
 ---
 
 <section class={boardClass} aria-label="Coupling image board">
-  {imageMeta.map(({ image, slug, side }, index) => {
+  {items.map(({ image, slug, side, isCover }, index) => {
     const size = SIZE_PATTERN[index % SIZE_PATTERN.length];
     return (
       <figure
@@ -26,6 +25,7 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
         data-size={size}
         data-detail-slug={slug}
         data-detail-side={side}
+        data-detail-cover={isCover ? "cover" : undefined}
       >
         <img src={image} alt="" loading="eager" />
       </figure>
