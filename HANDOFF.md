@@ -111,6 +111,11 @@
 24. **Filter 页眉对齐**：`filter-strip` 左对齐页脚 `FILTER`、在 42px 页眉区竖向居中（`display:flex; align-items:center`）。
 25. **Coupling 瀑布流改为「全项目图片」动态生成（commit `62a3c18`）**：原 `coupling.astro` 写死 16 张 R2 图（靠 `coupling.ts` 的 `manualImageOwners` 把 R2 URL 反查回 slug）。改为 `getAllCouplingItems()` 直接遍历全部 `projects` + `lehrgerueste`，把每个项目的 `cover_image` + 全部 `gallery` 产出为 `{image, slug, side, isCover}`，slug/side 在遍历时即得、不再依赖 URL 反查。`CouplingBoard.astro` 的 `Props` 由 `images: string[]` 改为 `items`，封面 tile 加 `data-detail-cover="cover"` 供 live-sync 定位。`filter/[term].astro` 仍走 `getImageMeta()`（行为不变）。效果：coupling 瀑布流 = 所有项目的全部图片，随 frontmatter 增减自动反映；点 tile 仍开对应详情 overlay。`global.css` / `ProjectCard.astro` 未动（红线，只追加不重写）。
 26. **Coupling 编辑器更新 live-sync（commit `62a3c18`）**：扩展 `live-patch.ts`，若本页存在 `.coupling-tile`，当 `/api/live` 返回某 slug 新封面时，更新该 slug 封面 tile 的 `img.src` 并 `dispatch resize` 触发 masonry 重排。即「每次更新后也同步更新到 coupling 里」：封面替换即时同步；gallery 增删走整站重建自动反映。
+27. **Filter 编辑器（commit `65513e8`）**：新增 `/coupling/` 和 `/filter/[slug]/` 页面的 Filter 增删编辑功能。核心脚本 `public/filter-edit.js`（纯 JS，is:inline 加载避免 Astro 模块打包冲突）。功能：
+    - **Coupling 页面**：点左下角 FILTER → 输入密码进入编辑模式 → 点击 tile 多选图片（蓝色边框高亮）→ 点"新建 Filter (N张)"→ 弹窗输入名称 → 自动生成 slug → API 保存到 GitHub（更新 `couplingFilters.ts` 触发重建）+ R2（`live/filters.json` 即时预览）→ 新 filter 链接立即出现在上方 strip。
+    - **Filter 词条页面**：进入编辑模式后可点击 tile 移除图片（确认弹窗），或点"+ 添加图片"打开全项目图缩略图选择器批量添加。
+    - **Filter 删除**：编辑模式下每个 filter 旁显示 × 按钮，点击确认后删除。
+    - 数据持久化：localStorage 会话级缓存 + GitHub 持久化 + R2 即时预览。`global.css` 追加编辑 UI 样式（工具栏、选中态、删除按钮、选择器网格）。
 
 ---
 
@@ -163,7 +168,7 @@
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。`filter/[term]` 行为不变。`global.css` / `ProjectCard.astro` 未动（红线）。详见 §4 条目 25–26。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**新增 Filter 编辑器**（commit `65513e8`）：coupling 页可多选 tile 创建新 filter；filter 页可增删图；数据走 GitHub（持久化）+ R2（即时）。详见 §4 条目 27。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---
