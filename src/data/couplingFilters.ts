@@ -11,7 +11,7 @@ export const couplingFilters = [
   {
     slug: "circle-square-circle",
     label: "Circle-Square-Circle",
-    images: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-01.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-02.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-2.jpg"],
+    images: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-01.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/cargo-p-delta-02.png","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-1.jpg","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/project-1-2.jpg","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/20251106-nano-banana-2025-11-06T12-03-53.jpg","https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/20251106-nano-banana-2025-11-06T11-31-06.jpg"],
   },
   {
     slug: "among-the-trees",
