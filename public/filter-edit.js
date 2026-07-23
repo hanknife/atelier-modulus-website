@@ -374,8 +374,8 @@ function appendFilterToStrip(filter, hrefFor) {
   });
 
   wrapper.appendChild(link);
-  wrapper.appendChild(sep);
   wrapper.appendChild(delBtn);
+  wrapper.appendChild(sep);
   strip.appendChild(wrapper);
 }
 
