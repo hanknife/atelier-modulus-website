@@ -6,11 +6,13 @@
 
 declare global {
   interface Window {
-    // Coupling management page reuses the floating edit bar for filter editing.
+    // Coupling / filter management pages reuse the floating edit bar for filter editing.
     amFilterEdit?: {
       enter: () => void;
       exit: () => void;
       create: () => void;
+      addImage: () => void;
+      save: () => void;
     };
   }
 }
@@ -366,11 +368,15 @@ function enterEdit() {
   const nl = bar?.querySelector<HTMLElement>("#edit-new-left");
   const nr = bar?.querySelector<HTMLElement>("#edit-new-right");
   const feCreate = bar?.querySelector<HTMLElement>("#fe-create");
+  const feAddImg = bar?.querySelector<HTMLElement>("#fe-add-img");
+  const feSave = bar?.querySelector<HTMLElement>("#fe-save");
   if (toggle) toggle.textContent = "退出(不保存)";
   if (save) save.hidden = false;
   if (nl) nl.hidden = false;
   if (nr) nr.hidden = false;
   if (feCreate) feCreate.hidden = false;
+  if (feAddImg) feAddImg.hidden = false;
+  if (feSave) feSave.hidden = false;
 }
 
 /** Leave edit mode and return to the read-only landing view of the editor.
@@ -397,11 +403,15 @@ function exitEdit() {
   const nl = bar?.querySelector<HTMLElement>("#edit-new-left");
   const nr = bar?.querySelector<HTMLElement>("#edit-new-right");
   const feCreate = bar?.querySelector<HTMLElement>("#fe-create");
+  const feAddImg = bar?.querySelector<HTMLElement>("#fe-add-img");
+  const feSave = bar?.querySelector<HTMLElement>("#fe-save");
   if (toggle) toggle.textContent = "编辑";
   if (save) save.hidden = true;
   if (nl) nl.hidden = true;
   if (nr) nr.hidden = true;
   if (feCreate) feCreate.hidden = true;
+  if (feAddImg) feAddImg.hidden = true;
+  if (feSave) feSave.hidden = true;
 }
 
 /** Rebuild the PROJECTS / LEHRGERÜSTE overlay lists from the current DOM so
@@ -884,18 +894,26 @@ function buildUI() {
   const bar = document.createElement("div");
   bar.id = "edit-bar";
 
-  // On the dedicated Coupling management page, the floating edit bar becomes
-  // the filter-editing control surface instead of the generic +项目/+Lehr
+  // On the dedicated Coupling / Filter management pages, the floating edit bar
+  // becomes the filter-editing control surface instead of the generic +项目/+Lehr
   // buttons. INFO editing still works because enterEdit() still runs.
   const isCoupling =
     document.body.classList.contains("filter-manage") &&
     !document.body.classList.contains("filter-term");
+  const isFilterTerm =
+    document.body.classList.contains("filter-manage") &&
+    document.body.classList.contains("filter-term");
 
   if (isCoupling) {
     bar.innerHTML = `
       <button id="edit-toggle">编辑</button>
       <button id="edit-save" hidden>保存</button>
       <button id="fe-create" hidden>新建 Filter (<span class="filter-sel-count">0</span>)</button>`;
+  } else if (isFilterTerm) {
+    bar.innerHTML = `
+      <button id="edit-toggle">编辑</button>
+      <button id="fe-add-img" hidden>+ 添加图片</button>
+      <button id="fe-save" hidden>保存更改 (<span class="filter-remove-count">0</span> 删除)</button>`;
   } else {
     bar.innerHTML = `
       <button id="edit-toggle">编辑</button>
@@ -908,10 +926,9 @@ function buildUI() {
   bar.querySelector<HTMLElement>("#edit-toggle")!.addEventListener("click", async () => {
     if (document.body.classList.contains(EDIT_MODE_CLASS)) {
       if (await showDialog("退出编辑？未保存的修改将丢失。")) {
-        if (isCoupling) {
-          // Coupling page: leave both filter-edit and generic edit modes without
-          // a full page reload (filter creation saves immediately; only unsaved
-          // INFO text would be lost, and the dialog already warned the user).
+        if (isCoupling || isFilterTerm) {
+          // Coupling / filter-term pages: leave both filter-edit and generic edit
+          // modes without a full page reload.
           exitEdit();
           window.amFilterEdit?.exit();
         } else {
@@ -919,7 +936,7 @@ function buildUI() {
         }
       }
     } else {
-      if (isCoupling) {
+      if (isCoupling || isFilterTerm) {
         enterEdit();
         window.amFilterEdit?.enter();
       } else {
@@ -927,11 +944,18 @@ function buildUI() {
       }
     }
   });
-  bar.querySelector<HTMLElement>("#edit-save")!.addEventListener("click", () => save());
+  bar.querySelector<HTMLElement>("#edit-save")?.addEventListener("click", () => save());
 
   if (isCoupling) {
     bar.querySelector<HTMLElement>("#fe-create")!.addEventListener("click", () => {
       window.amFilterEdit?.create();
+    });
+  } else if (isFilterTerm) {
+    bar.querySelector<HTMLElement>("#fe-add-img")!.addEventListener("click", () => {
+      window.amFilterEdit?.addImage();
+    });
+    bar.querySelector<HTMLElement>("#fe-save")!.addEventListener("click", () => {
+      window.amFilterEdit?.save();
     });
   } else {
     bar.querySelector<HTMLElement>("#edit-new-left")!.addEventListener("click", () => newProject("left"));

@@ -1448,3 +1448,9 @@ body.filter-edit-mode #filter-edit-bar {
 body.filter-manage:not(.filter-term) #filter-edit-bar {
   display: none !important;
 }
+
+/* On the Filter-term management page, the same applies: add-image / save /
+   exit controls are driven from the unified right-side #edit-bar. */
+body.filter-term #filter-edit-bar {
+  display: none !important;
+}

@@ -409,8 +409,9 @@ async function removeTileFromFilter(tile) {
 }
 
 function updateRemovedCount() {
-  const badge = document.getElementById("filter-remove-count");
-  if (badge) badge.textContent = String(removedImages.size);
+  document.querySelectorAll("#filter-remove-count, .filter-remove-count").forEach((badge) => {
+    badge.textContent = String(removedImages.size);
+  });
 }
 
 // Show a picker modal with all board images not currently in this filter.
@@ -551,8 +552,9 @@ async function saveFilterChanges() {
   // Server
   const ok = await saveFiltersToServer(mergedFilters());
   if (ok) {
+    removedImages.clear();
+    updateRemovedCount();
     await showAlert("Filter 已更新，Cloudflare 正在重建（1–2 分钟）。");
-    exitFilterEdit();
   } else {
     await showAlert("保存失败，更改仅在本地生效。");
   }
@@ -684,20 +686,17 @@ function buildUI() {
 
 buildUI();
 
-// The two management pages use filter editing differently:
-//  - /editor/filter/[slug]/ (filter-term page) needs the toolbar immediately
-//    to add/remove images, so it auto-enters edit mode on load.
-//  - /editor/coupling/ uses the unified right-side #edit-bar (from edit-mode.ts)
-//    for filter controls. The bottom-left #filter-edit-bar is hidden by CSS,
-//    and edit-mode.ts calls window.amFilterEdit.enter/exit/create.
-if (isOnFilterPage()) {
-  setTimeout(() => enterFilterEdit(), 150);
-}
+// Both management pages now use the unified right-side #edit-bar (from
+// edit-mode.ts) for filter controls. The bottom-left #filter-edit-bar is hidden
+// by CSS on those pages, and edit-mode.ts calls window.amFilterEdit hooks to
+// drive add / save / create / exit actions.
 
-// Expose hooks so the coupling management page's unified edit bar can drive
-// filter editing from the same floating toolbar as INFO editing.
+// Expose hooks so the unified edit bar can drive filter editing from the same
+// floating toolbar as INFO editing.
 window.amFilterEdit = {
   enter: enterFilterEdit,
   exit: exitFilterEdit,
-  create: createNewFilter
+  create: createNewFilter,
+  addImage: showAddPicker,
+  save: saveFilterChanges
 };
