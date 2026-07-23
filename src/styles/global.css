@@ -1429,3 +1429,16 @@ main {
   outline: none;
   border-color: #fff;
 }
+
+/* === Issue 3: filter toolbar visibility (append-only) =====================
+   The base #filter-edit-bar rule above sets `display: flex`, which overrides
+   the `[hidden]` attribute, so the toolbar was ALWAYS visible at the
+   bottom-left (the "编辑 Filters" bar the user wanted gone). Drive visibility
+   from body.filter-edit-mode instead, exactly like the homepage editor's
+   toolbars (only shown while actively editing). Default = hidden. */
+#filter-edit-bar {
+  display: none;
+}
+body.filter-edit-mode #filter-edit-bar {
+  display: flex;
+}

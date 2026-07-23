@@ -7,6 +7,7 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import ProjectDetailOverlays from "../../../components/ProjectDetailOverlays.astro";
 import CouplingFilterStrip from "../../../components/CouplingFilterStrip.astro";
 import CouplingBoard from "../../../components/CouplingBoard.astro";
+import "../../../styles/editor.css";
 import { couplingFilters } from "../../../data/couplingFilters";
 import { getImageMeta, getAllCouplingItems } from "../../../lib/coupling";
 
@@ -29,7 +30,7 @@ const allBoardImages = (await getAllCouplingItems()).map((item) => item.image);
   bodyClass="coupling-state filter-open filter-term filter-manage"
   footerLeftLabel="← COUPLING"
   footerLeftHref="/editor/coupling/"
-  showInfo={false}
+  showInfo={true}
 >
   <script type="application/json" id="filter-data" set:html={JSON.stringify(couplingFilters)}></script>
   <script type="application/json" id="board-images" set:html={JSON.stringify(allBoardImages)}></script>
@@ -37,4 +38,7 @@ const allBoardImages = (await getAllCouplingItems()).map((item) => item.image);
   <CouplingFilterStrip />
   <CouplingBoard items={boardItems} />
   <script is:inline src="/filter-edit.js"></script>
+  <script>
+    import "../../../scripts/edit-mode.ts";
+  </script>
 </BaseLayout>

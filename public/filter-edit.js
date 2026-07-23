@@ -672,9 +672,22 @@ function buildUI() {
 
 buildUI();
 
-// Auto-enter edit mode on the dedicated management pages (/editor/coupling/
-// and /editor/filter/[slug]/). These pages are server-marked with the
-// `filter-manage` body class; the password prompt gates access.
-if (document.body.classList.contains("filter-manage")) {
+// The two management pages use filter editing differently:
+//  - /editor/filter/[slug]/ (filter-term page) needs the toolbar immediately
+//    to add/remove images, so it auto-enters edit mode on load.
+//  - /editor/coupling/ keeps a clean bottom bar (matching the homepage
+//    editor): the toolbar stays hidden until the user clicks the green
+//    "FILTER" footer link, which is wired below as the edit trigger.
+if (isOnFilterPage()) {
   setTimeout(() => enterFilterEdit(), 150);
+} else {
+  // The green "FILTER" footer link is rendered by BaseLayout AFTER this
+  // script (which lives in the page slot, before the footer in the DOM), so
+  // bind via delegation on document to avoid a null lookup at init time.
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest("[data-filter-edit-trigger]");
+    if (!trigger) return;
+    e.preventDefault();
+    enterFilterEdit();
+  });
 }

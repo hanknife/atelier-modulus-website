@@ -9,6 +9,7 @@ const {
   footerLeftLabel = "COUPLING",
   footerLeftHref = "/coupling/",
   footerLeftToggle = "",
+  footerLeftEdit = false,
   closeHref = "",
   closeText = "→Close",
   brandLabel = "ATELIER MODULUS",
@@ -122,13 +123,16 @@ const cleanLines = (v: unknown): string =>
       )}
     </aside>
     <footer class="site-footer">
-      <a
-        class="link-green"
-        href={footerLeftHref}
-        data-filter-toggle={footerLeftToggle || undefined}
-      >
-        {footerLeftLabel}
-      </a>
+      {footerLeftLabel && (
+        <a
+          class="link-green"
+          href={footerLeftEdit ? "#" : footerLeftHref}
+          data-filter-toggle={footerLeftToggle || undefined}
+          data-filter-edit-trigger={footerLeftEdit ? "" : undefined}
+        >
+          {footerLeftLabel}
+        </a>
+      )}
       {showInfo && <a href="/info/" data-overlay-toggle="info">INFO</a>}
     </footer>
     <script is:inline>

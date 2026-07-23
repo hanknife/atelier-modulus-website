@@ -133,6 +133,22 @@
     - 把管理套件返回链接串成层级：`/editor/coupling/` 页脚 `← EDITOR` → `/editor/`；`/editor/filter/[slug]/` 页脚 `← COUPLING` → `/editor/coupling/`。管理页之间可互达，不再卡在预览。
     - 红线：`editor.astro` 与新建的 `editor/coupling.astro`、`editor/filter/[term].astro` 均非高危文件（未改 BaseLayout/index/global.css）；仅改 footer `href`（不动导航栏文字、不动动画/Close）。
 
+### 耦合管理页底部 UI 对齐首页 + INFO 可编辑（本会话 follow-up，Issue 3）
+
+30. **`/editor/coupling/` 底部与首页 `/editor` 一致 + INFO 可编辑**：用户要求耦合管理页底部像首页——去掉「编辑 Filters」工具栏、去掉绿色「← EDITOR」链接、显示可编辑 INFO（与首页 INFO 同机制）。修复与改动：
+    - **根因（工具栏关不掉）**：`global.css` 的 `#filter-edit-bar` 基础规则设 `display:flex`，其优先级压过 `[hidden]` 属性，导致脚本里 `bar.hidden=true` 根本不隐藏工具栏——「编辑 Filters」在加载后即常驻底部左侧（正是用户看到的）。改为用 `body.filter-edit-mode` 驱动可见性（**`global.css` 仅追加**，未改原规则）：
+      ```css
+      #filter-edit-bar { display: none; }
+      body.filter-edit-mode #filter-edit-bar { display: flex; }
+      ```
+      与首页「工具栏仅在编辑态出现」一致；filter 词条管理页靠自动进入编辑态（`body.filter-edit-mode`）照常显示工具栏。
+    - **触发绑定失效**：原 `filter-edit.js` 初始化时直接 `document.querySelector('[data-filter-edit-trigger]')` 绑点击，但脚本位于页面 slot（`<main>` 内），渲染早于 footer，绑定时刻 trigger 尚不存在、监听从未挂上。改为 `document` 事件委托，规避时序问题。
+    - **`BaseLayout.astro`（高危文件，本次仅最小安全改动）**：新增 `footerLeftEdit` prop；footer 绿色链接在 `footerLeftLabel` 为空时不渲染；`footerLeftEdit=true` 时渲染 `href="#"` + `data-filter-edit-trigger`，由 `filter-edit.js` 委托触发进入 filter 编辑态（不再导航）。**未动** overlay 滑入动画、Close 按钮、导航栏文字、菜单排序。
+    - **`/editor/coupling/`**：`showInfo={true}`（显示 INFO）；`footerLeftLabel="FILTER"` + `footerLeftEdit={true}`（绿色 FILTER 链接，点击按需进入 filter 编辑态、显示工具栏，取代原绿色「← EDITOR」）；加载 `edit-mode.ts` 使 INFO 编辑能力与首页完全一致（共享 `am_edit_pass` 密码会话）；`filter-edit.js` 在该页**不再自动进入**（工具栏默认隐藏），仅 filter 词条管理页（`isOnFilterPage()`）仍自动进入以增删图。
+    - **`/editor/filter/[term]/`**：`showInfo={true}`（INFO 可编辑，与耦合页一致）；其余（自动进入、工具栏、绿色「← COUPLING」返回链接）保持不变（用户未对该页提意见）。
+    - 两个管理页均补 `import "../../styles/editor.css"`（原仅首页独有），修复 `#edit-bar` 定位缺失导致的与 footer 重叠，并补齐对话框/编辑态样式（`editor.css` 非红线文件）。
+    - **验证**：Playwright 实测 `/editor/coupling/` 底部为 `FILTER`+`INFO`、无 `← EDITOR`、工具栏默认 `display:none`、点 FILTER 后进入 filter 编辑态且工具栏出现、点「编辑」进入编辑态后 INFO 字段 `contenteditable=true`；首页 `/editor` 仍为 `COUPLING`+`INFO`（回归通过）；filter 词条管理页工具栏自动出现、INFO 可见。`pnpm build` 26 页通过、`check-pre-whitespace` 通过；无脚本/控制台错误（仅本地 `/images/*` 占位图 404，属既有 frontmatter 引用、与本次无关）。红线：`global.css` 仅追加；`BaseLayout.astro` 改动极小且未触动画/Close/导航；其余为管理页（非高危）。
+
 ---
 
 ## 5. Overlay 菜单排序规则（第 2、6、8 条的具体落地）
@@ -177,14 +193,14 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交（main HEAD）：`b3b6f3a`（fix(nav): link /editor COUPLING to coupling management; chain management back-links）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）；③ 主页管理页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，并把管理套件返回链接串成层级。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
+- 最新提交（main HEAD）：`93ef1a7`（fix(coupling): align management footer with homepage; INFO editable; hide filter toolbar by default）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）；③ 主页管理页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，并把管理套件返回链接串成层级；④ 耦合管理页底部对齐首页（`/editor/coupling/` 显示可编辑 INFO + 绿色 FILTER 链接取代「← EDITOR」，工具栏默认隐藏、按需出现），`/editor/filter/[slug]/` 亦显示可编辑 INFO。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。详见 §4 条目 27、28。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。**耦合管理页底部已对齐首页（本会话 Issue 3）**：`/editor/coupling/` 底部为绿色 `FILTER` 链接（点击按需进入 filter 编辑态、显示工具栏，取代原绿色「← EDITOR」）+ 可编辑 `INFO`（加载 `edit-mode.ts`，与首页同机制）；「编辑 Filters」工具栏改为默认隐藏、仅在 filter 编辑态出现，与首页「工具栏仅在编辑态出现」一致；`/editor/filter/[slug]/` 亦显示可编辑 INFO。详见 §4 条目 27、28、30。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---
