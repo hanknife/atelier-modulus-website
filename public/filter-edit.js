@@ -686,6 +686,20 @@ function buildUI() {
 
 buildUI();
 
+// On initial load, apply any local deletion tombstones to the server-rendered
+// static strip. Otherwise a deleted filter reappears after refresh until the
+// Cloudflare rebuild (or live/filters.json override) kicks in.
+(function applyTombstonesOnInit() {
+  const local = loadFilters();
+  const deletedSlugs = new Set(
+    local.filter((f) => f.images === "__DELETED__").map((f) => f.slug)
+  );
+  if (deletedSlugs.size === 0) return;
+  document.querySelectorAll(".filter-strip-item").forEach((el) => {
+    if (deletedSlugs.has(el.dataset.filterSlug)) el.remove();
+  });
+})();
+
 // Both management pages now use the unified right-side #edit-bar (from
 // edit-mode.ts) for filter controls. The bottom-left #filter-edit-bar is hidden
 // by CSS on those pages, and edit-mode.ts calls window.amFilterEdit hooks to
