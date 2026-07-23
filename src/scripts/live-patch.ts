@@ -13,8 +13,16 @@ async function patchLive() {
     const map = (await res.json()) as Record<string, any>;
     if (!map || Object.keys(map).length === 0) return;
     document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
-      const link = card.querySelector<HTMLElement>("a.view-link[data-slug]");
-      const slug = link?.dataset.slug;
+      // Most cards expose the slug via an inner a.view-link[data-slug]. The
+      // project DETAIL page's editable card is an <article.project-detail> that
+      // carries data-slug itself (no inner view-link). Read it directly — we
+      // must NOT use card.querySelector("a.view-link[data-slug]") here, because
+      // the detail article also contains the PAIRED project's ProjectCard in its
+      // .detail-related aside, whose nested view-link would resolve to the wrong
+      // slug and make the override lookup miss the hero image.
+      const slug = card.classList.contains("project-detail")
+        ? card.dataset.slug
+        : card.querySelector<HTMLElement>("a.view-link[data-slug]")?.dataset.slug;
       if (!slug) return;
       const override = map[slug];
       if (!override || !override.cover_image) return;

@@ -805,8 +805,16 @@ async function save() {
   saving = true;
   // Collect the editing surface: column cards plus the info overlay. The detail
   // overlays are read-only previews that share the same data-path; including
-  // them has caused duplicate-path / stale-content saves on GitHub.
-  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card, .info-overlay"));
+  // them has caused duplicate-path / stale-content saves on GitHub (overlay
+  // edits are instead copied to their column card via persistCardChange).
+  //
+  // We ALSO collect the project DETAIL page's editable card
+  // (article.project-detail.project-card). That card is the only surface that
+  // exposes the "换封面图" (replace-cover) control, so if we skip it here the
+  // user's cover/image change is silently dropped and the preview never updates.
+  // On the detail page there are no column cards, so there is no slug clash with
+  // the dedup below; on /editor there is no detail article, so it is a no-op.
+  const cards = Array.from(document.querySelectorAll<HTMLElement>(".project-column .project-card, .info-overlay, article.project-detail.project-card"));
 
   // Instant feedback + disable to prevent double-submit.
   const saveBtn = document.querySelector<HTMLElement>("#edit-save");
