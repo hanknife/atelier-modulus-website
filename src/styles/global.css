@@ -1442,3 +1442,9 @@ main {
 body.filter-edit-mode #filter-edit-bar {
   display: flex;
 }
+
+/* On the dedicated Coupling management page, filter controls live inside the
+   unified right-side #edit-bar instead of the bottom-left #filter-edit-bar. */
+body.filter-manage:not(.filter-term) #filter-edit-bar {
+  display: none !important;
+}

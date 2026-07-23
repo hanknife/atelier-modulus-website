@@ -254,8 +254,9 @@ function toggleSelectTile(tile) {
 }
 
 function updateSelectionCount() {
-  const badge = document.getElementById("filter-sel-count");
-  if (badge) badge.textContent = String(selectedImages.size);
+  document.querySelectorAll("#filter-sel-count, .filter-sel-count").forEach((badge) => {
+    badge.textContent = String(selectedImages.size);
+  });
 }
 
 function clearSelection() {
@@ -675,19 +676,17 @@ buildUI();
 // The two management pages use filter editing differently:
 //  - /editor/filter/[slug]/ (filter-term page) needs the toolbar immediately
 //    to add/remove images, so it auto-enters edit mode on load.
-//  - /editor/coupling/ keeps a clean bottom bar (matching the homepage
-//    editor): the toolbar stays hidden until the user clicks the green
-//    "FILTER" footer link, which is wired below as the edit trigger.
+//  - /editor/coupling/ uses the unified right-side #edit-bar (from edit-mode.ts)
+//    for filter controls. The bottom-left #filter-edit-bar is hidden by CSS,
+//    and edit-mode.ts calls window.amFilterEdit.enter/exit/create.
 if (isOnFilterPage()) {
   setTimeout(() => enterFilterEdit(), 150);
-} else {
-  // The green "FILTER" footer link is rendered by BaseLayout AFTER this
-  // script (which lives in the page slot, before the footer in the DOM), so
-  // bind via delegation on document to avoid a null lookup at init time.
-  document.addEventListener("click", (e) => {
-    const trigger = e.target.closest("[data-filter-edit-trigger]");
-    if (!trigger) return;
-    e.preventDefault();
-    enterFilterEdit();
-  });
 }
+
+// Expose hooks so the coupling management page's unified edit bar can drive
+// filter editing from the same floating toolbar as INFO editing.
+window.amFilterEdit = {
+  enter: enterFilterEdit,
+  exit: exitFilterEdit,
+  create: createNewFilter
+};

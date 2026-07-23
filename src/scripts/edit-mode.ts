@@ -4,6 +4,17 @@
 // sent to /api/save (Cloudflare Pages Function) which writes back to GitHub.
 // The visible site layout is untouched; only data-* hooks and an edit bar are added.
 
+declare global {
+  interface Window {
+    // Coupling management page reuses the floating edit bar for filter editing.
+    amFilterEdit?: {
+      enter: () => void;
+      exit: () => void;
+      create: () => void;
+    };
+  }
+}
+
 const API = "/api/save";
 const EDIT_MODE_CLASS = "edit-mode";
 const PASS_KEY = "am_edit_pass";
@@ -354,10 +365,12 @@ function enterEdit() {
   const save = bar?.querySelector<HTMLElement>("#edit-save");
   const nl = bar?.querySelector<HTMLElement>("#edit-new-left");
   const nr = bar?.querySelector<HTMLElement>("#edit-new-right");
+  const feCreate = bar?.querySelector<HTMLElement>("#fe-create");
   if (toggle) toggle.textContent = "退出(不保存)";
   if (save) save.hidden = false;
   if (nl) nl.hidden = false;
   if (nr) nr.hidden = false;
+  if (feCreate) feCreate.hidden = false;
 }
 
 /** Leave edit mode and return to the read-only landing view of the editor.
@@ -383,10 +396,12 @@ function exitEdit() {
   const save = bar?.querySelector<HTMLElement>("#edit-save");
   const nl = bar?.querySelector<HTMLElement>("#edit-new-left");
   const nr = bar?.querySelector<HTMLElement>("#edit-new-right");
+  const feCreate = bar?.querySelector<HTMLElement>("#fe-create");
   if (toggle) toggle.textContent = "编辑";
   if (save) save.hidden = true;
   if (nl) nl.hidden = true;
   if (nr) nr.hidden = true;
+  if (feCreate) feCreate.hidden = true;
 }
 
 /** Rebuild the PROJECTS / LEHRGERÜSTE overlay lists from the current DOM so
@@ -867,23 +882,60 @@ async function save() {
 function buildUI() {
   const bar = document.createElement("div");
   bar.id = "edit-bar";
-  bar.innerHTML = `
-    <button id="edit-toggle">编辑</button>
-    <button id="edit-save" hidden>保存</button>
-    <button id="edit-new-left" hidden>+ 项目</button>
-    <button id="edit-new-right" hidden>+ Lehr</button>`;
+
+  // On the dedicated Coupling management page, the floating edit bar becomes
+  // the filter-editing control surface instead of the generic +项目/+Lehr
+  // buttons. INFO editing still works because enterEdit() still runs.
+  const isCoupling =
+    document.body.classList.contains("filter-manage") &&
+    !document.body.classList.contains("filter-term");
+
+  if (isCoupling) {
+    bar.innerHTML = `
+      <button id="edit-toggle">编辑</button>
+      <button id="edit-save" hidden>保存</button>
+      <button id="fe-create" hidden>新建 Filter (<span class="filter-sel-count">0</span>)</button>`;
+  } else {
+    bar.innerHTML = `
+      <button id="edit-toggle">编辑</button>
+      <button id="edit-save" hidden>保存</button>
+      <button id="edit-new-left" hidden>+ 项目</button>
+      <button id="edit-new-right" hidden>+ Lehr</button>`;
+  }
   document.body.appendChild(bar);
 
   bar.querySelector<HTMLElement>("#edit-toggle")!.addEventListener("click", async () => {
     if (document.body.classList.contains(EDIT_MODE_CLASS)) {
-      if (await showDialog("退出编辑？未保存的修改将丢失。")) window.location.reload();
+      if (await showDialog("退出编辑？未保存的修改将丢失。")) {
+        if (isCoupling) {
+          // Coupling page: leave both filter-edit and generic edit modes without
+          // a full page reload (filter creation saves immediately; only unsaved
+          // INFO text would be lost, and the dialog already warned the user).
+          exitEdit();
+          window.amFilterEdit?.exit();
+        } else {
+          window.location.reload();
+        }
+      }
     } else {
-      enterEdit();
+      if (isCoupling) {
+        enterEdit();
+        window.amFilterEdit?.enter();
+      } else {
+        enterEdit();
+      }
     }
   });
   bar.querySelector<HTMLElement>("#edit-save")!.addEventListener("click", () => save());
-  bar.querySelector<HTMLElement>("#edit-new-left")!.addEventListener("click", () => newProject("left"));
-  bar.querySelector<HTMLElement>("#edit-new-right")!.addEventListener("click", () => newProject("right"));
+
+  if (isCoupling) {
+    bar.querySelector<HTMLElement>("#fe-create")!.addEventListener("click", () => {
+      window.amFilterEdit?.create();
+    });
+  } else {
+    bar.querySelector<HTMLElement>("#edit-new-left")!.addEventListener("click", () => newProject("left"));
+    bar.querySelector<HTMLElement>("#edit-new-right")!.addEventListener("click", () => newProject("right"));
+  }
 
   document.addEventListener("change", (e) => {
     const t = e.target as HTMLElement;

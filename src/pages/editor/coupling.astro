@@ -18,9 +18,7 @@ const boardImageUrls = boardItems.map((item) => item.image);
 <BaseLayout
   title="Coupling / Atelier Modulus — Editor"
   bodyClass="coupling-state filter-open filter-manage"
-  footerLeftLabel="FILTER"
-  footerLeftHref="/editor/"
-  footerLeftEdit={true}
+  footerLeftLabel=""
   showInfo={true}
 >
   <script type="application/json" id="filter-data" set:html={JSON.stringify(couplingFilters)}></script>
