@@ -162,6 +162,15 @@
 
 ---
 
+### 修复新建 Filter 时「保存失败：unauthorized」并重输密码机制
+
+32. **修复新建 Filter 时「保存失败：unauthorized」并加入密码重输机制**：用户报告在 `/editor/coupling/` 选好图片点「新建 Filter」后弹出 `保存失败： unauthorized`。根因是后端 `EDIT_PASSCODE` 校验不通过；另外旧密码一旦存入 `sessionStorage` 就不会重新弹窗，且输入首尾空格也会被原样保存导致匹配失败。修复：
+    - **`public/filter-edit.js`**：`getPass()` / `getPassSync()` 对输入密码 `trim()`，避免意外空格导致失败；`saveFiltersToServer()` 改为支持一次重试——收到 HTTP 401 时清除 `am_edit_pass` 缓存并重新弹出密码框，用户可立即输入正确密码，无需手动刷新；仍失败才提示「保存失败：编辑密码错误。」
+    - **`src/scripts/edit-mode.ts`**：`getPass()` 同样 `trim()`；`save()` 遇到 401/`unauthorized` 时把提示改为「编辑密码错误——请刷新页面后重新输入编辑密码」并清除缓存；原提示「GITHUB_PAT 失效」对编辑密码错误的情况具有误导性。
+    - **验证**：Playwright 拦截 `/api/save`：第一次返回 401、第二次返回 200，实测首次输入错误密码后触发重新弹窗，二次输入正确密码即成功创建 Filter 并弹出成功提示；原 `/editor/coupling/` 创建流程回归通过。`pnpm build` 26 页通过。红线：未改动高危文件。
+
+---
+
 ## 5. Overlay 菜单排序规则（第 2、6、8 条的具体落地）
 
 - **左 PROJECTS**：按 `list_title` 字符串升序（`localeCompare`），所以 `000 New Project` 在顶，随后 `001 Ruin` … `090_New Project`。
@@ -204,14 +213,14 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交（main HEAD）：`bd0cdce`（fix(coupling): move filter editing into right-side edit bar; empty bottom-left）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）；③ 主页管理页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，并把管理套件返回链接串成层级；④ 耦合管理页底部对齐首页（`/editor/coupling/` 显示可编辑 INFO，工具栏默认隐藏、按需出现），`/editor/filter/[slug]/` 亦显示可编辑 INFO；⑤ round-2：耦合管理页底部左侧彻底清空，filter 编辑入口移入右侧「编辑」栏（`新建 Filter` 多选建 Filter，底部工具栏强制隐藏）。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
+- 最新提交（main HEAD）：`6026f51`（fix(coupling): move filter editing into right-side edit bar; empty bottom-left）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）；③ 主页管理页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，并把管理套件返回链接串成层级；④ 耦合管理页底部对齐首页（`/editor/coupling/` 显示可编辑 INFO，工具栏默认隐藏、按需出现），`/editor/filter/[slug]/` 亦显示可编辑 INFO；⑤ round-2：耦合管理页底部左侧彻底清空，filter 编辑入口移入右侧「编辑」栏（`新建 Filter` 多选建 Filter，底部工具栏强制隐藏）；⑥ 修复新建 Filter 时 `保存失败： unauthorized`——密码输入 `trim()` 去空格，401 时清除缓存并重新弹窗让作者重输密码。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。**耦合管理页底部已对齐首页并收口 filter 编辑到右栏（本会话 Issue 3，round-1 + round-2）**：`/editor/coupling/` 底部左侧已彻底清空（无绿色链接、无「← EDITOR」），仅留可编辑 `INFO`（加载 `edit-mode.ts`，与首页同机制）；filter 编辑入口移入右侧悬浮「编辑」按钮——点「编辑」进入 filter 编辑态（`body.filter-edit-mode`），栏内切换为「退出(不保存) / 保存 / 新建 Filter (N)」（不再显示 `+项目`/`+Lehr`），可多选 tile（badge 实时计数）后「新建 Filter」命名即建，底部独立的「编辑 Filters」工具栏在管理页强制隐藏（`filter-manage:not(.filter-term)`）。`/editor/filter/[slug]/` 仍显示可编辑 INFO 与原「+项目/+Lehr」编辑栏（该页带 `filter-term` 标记，不受影响）。详见 §4 条目 27、28、30、31。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。**耦合管理页底部已对齐首页并收口 filter 编辑到右栏（本会话 Issue 3，round-1 + round-2）**：`/editor/coupling/` 底部左侧已彻底清空（无绿色链接、无「← EDITOR」），仅留可编辑 `INFO`（加载 `edit-mode.ts`，与首页同机制）；filter 编辑入口移入右侧悬浮「编辑」按钮——点「编辑」进入 filter 编辑态（`body.filter-edit-mode`），栏内切换为「退出(不保存) / 保存 / 新建 Filter (N)」（不再显示 `+项目`/`+Lehr`），可多选 tile（badge 实时计数）后「新建 Filter」命名即建，底部独立的「编辑 Filters」工具栏在管理页强制隐藏（`filter-manage:not(.filter-term)`）。`/editor/filter/[slug]/` 仍显示可编辑 INFO 与原「+项目/+Lehr」编辑栏（该页带 `filter-term` 标记，不受影响）。新建 Filter 保存现已对密码 `trim()` 去空格，并在 401 时清除缓存重新弹窗让作者重输密码（条目 32）。详见 §4 条目 27、28、30、31、32。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---

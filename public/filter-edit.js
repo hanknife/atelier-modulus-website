@@ -21,14 +21,14 @@ const LS_KEY = "am_filter_edit_v1";
 function getPass() {
   let p = sessionStorage.getItem(PASS_KEY);
   if (!p) {
-    p = window.prompt("输入编辑密码") || "";
+    p = (window.prompt("输入编辑密码") || "").trim();
     if (p) sessionStorage.setItem(PASS_KEY, p);
   }
   return p;
 }
 
 function getPassSync() {
-  return sessionStorage.getItem(PASS_KEY) || "";
+  return (sessionStorage.getItem(PASS_KEY) || "").trim();
 }
 
 // ---- Dialogs (monochrome, same visual language as editor) ----------------
@@ -177,35 +177,46 @@ function mergedFilters() {
 // ---- API calls ------------------------------------------------------------
 
 async function saveFiltersToServer(filters) {
-  const pass = getPassSync();
-  if (!pass) {
-    await showAlert("需要编辑密码");
-    return false;
-  }
-  try {
-    // Serialize filters as the content of src/data/couplingFilters.ts so that
-    // the next Cloudflare rebuild picks them up automatically.
-    const tsContent = buildFiltersTS(filters);
-    const res = await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "save-filters",
-        filters: filters,
-        tsContent: tsContent,
-        passcode: pass
-      })
-    });
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      await showAlert("保存失败：" + (data.error || JSON.stringify(data)));
+  let pass = getPassSync();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (!pass) pass = getPass();
+    if (!pass) {
+      await showAlert("需要编辑密码");
       return false;
     }
-    return true;
-  } catch (e) {
-    await showAlert("保存失败：" + String(e));
-    return false;
+    try {
+      // Serialize filters as the content of src/data/couplingFilters.ts so that
+      // the next Cloudflare rebuild picks them up automatically.
+      const tsContent = buildFiltersTS(filters);
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-filters",
+          filters: filters,
+          tsContent: tsContent,
+          passcode: pass
+        })
+      });
+      if (res.status === 401) {
+        sessionStorage.removeItem(PASS_KEY);
+        pass = "";
+        if (attempt === 0) continue; // prompt once more
+        await showAlert("保存失败：编辑密码错误。");
+        return false;
+      }
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        await showAlert("保存失败：" + (data.error || JSON.stringify(data)));
+        return false;
+      }
+      return true;
+    } catch (e) {
+      await showAlert("保存失败：" + String(e));
+      return false;
+    }
   }
+  return false;
 }
 
 // Build the TypeScript source for src/data/couplingFilters.ts from the current

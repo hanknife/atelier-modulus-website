@@ -87,7 +87,7 @@ type Fm = Record<string, any>;
 function getPass(): string {
   let p = sessionStorage.getItem(PASS_KEY);
   if (!p) {
-    p = window.prompt("输入编辑密码") || "";
+    p = (window.prompt("输入编辑密码") || "").trim();
     if (p) sessionStorage.setItem(PASS_KEY, p);
   }
   return p;
@@ -855,7 +855,8 @@ async function save() {
     if (errText.includes("tree 422") || errText.includes("BadObjectState")) {
       hint = "\n\n刷新后重新编辑一次即可。若反复出现，请把截图和当时改了哪几个项目告诉我。";
     } else if (res.status === 401 || res.status === 403 || errText.includes("unauthorized")) {
-      hint = "\n\n多半是 Cloudflare 后台的 GITHUB_PAT 失效了——去 Settings → Environment variables 把它更新成有效的 token，重新部署后再试。";
+      hint = "\n\n编辑密码错误——请刷新页面后重新输入编辑密码。";
+      sessionStorage.removeItem(PASS_KEY);
     } else {
       hint = "\n\n请截图完整错误信息发给我。";
     }
