@@ -84,7 +84,6 @@ html.detail-overlay-open body.edit-mode .overlay-edit-strip {
   display: flex;
   gap: 8px;
   align-items: center;
-  background: var(--paper, #fff);
 }
 
 /* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
