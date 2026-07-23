@@ -12,7 +12,7 @@ description_en: |
   
   Through repetition and variation, the project generates towers, pavilions, and platforms that form a landscape between infrastructure and public space. The proposal explores how a functional engineering object can become a spatial and sensory experience, redefining the relationship between infrastructure, landscape, and human perception.
 cover_image: "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/4.png"
-gallery: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/1.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/2.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/20251106-nano-banana-2025-11-06T11-48-22.jpg", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/3.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/3.png"]
+gallery: ["https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/1.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/2.png", "https://pub-e0d304e4d3564adbb6c3cbf768403529.r2.dev/3.png"]
 tags: ["pavilion", "coastal", "research"]
 category: projects
 display_date: "2026"
