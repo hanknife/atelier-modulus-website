@@ -33,12 +33,35 @@ const manualImageOwners: Record<string, string> = {
 };
 
 /**
+ * Normalize an R2 image URL for comparison by fully decoding percent-encoded
+ * segments. This handles mismatched encoding between filter data
+ * (e.g. %E6%88%AA%E5%B1%8F) and frontmatter (e.g. 截屏).
+ */
+function normalizeUrl(url: string): string {
+  try {
+    // Repeatedly decode until stable (handles double-encoding edge cases)
+    let prev = "";
+    let curr = url;
+    while (curr !== prev) {
+      prev = curr;
+      curr = decodeURIComponent(curr);
+    }
+    return curr;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Resolve a flat list of image URLs (the curated /filter pages) to coupling
  * items. Each URL is mapped back to its owning project (slug + side) by
  * scanning every project's cover_image + gallery arrays at build time.
  *
  * Falls back to manualImageOwners only for URLs that exist in multiple
  * projects and need a forced owner, or orphan URLs with no project match.
+ *
+ * All URLs are normalized (decodeURIComponent) before lookup so that
+ * encoded (%E6%88%AA%E5%B1%8F) and decoded (截屏) forms match.
  */
 export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[]> {
   const projects = (await getCollection("projects")).sort(
@@ -48,7 +71,7 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
     projects.map((p) => [p.id.replace(/\.mdx?$/, ""), p])
   );
 
-  // Build a reverse index: R2 URL → array of slugs that contain it.
+  // Build a reverse index: normalized R2 URL → array of slugs that contain it.
   // Most images belong to exactly one project; a few may be shared.
   const urlToSlugs: Record<string, string[]> = {};
   for (const p of projects) {
@@ -56,16 +79,25 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
     const allImages = [p.data.cover_image, ...(p.data.gallery ?? [])];
     for (const img of allImages) {
       if (typeof img === "string" && img.length > 0) {
-        if (!urlToSlugs[img]) urlToSlugs[img] = [];
-        if (!urlToSlugs[img].includes(slug)) urlToSlugs[img].push(slug);
+        const key = normalizeUrl(img);
+        if (!urlToSlugs[key]) urlToSlugs[key] = [];
+        if (!urlToSlugs[key].includes(slug)) urlToSlugs[key].push(slug);
       }
     }
   }
 
+  // Also normalize manualImageOwners keys so encoded lookups match
+  const normalizedManualOwners: Record<string, string> = {};
+  for (const [url, slug] of Object.entries(manualImageOwners)) {
+    normalizedManualOwners[normalizeUrl(url)] = slug;
+  }
+
   return images.map((image) => {
+    const normKey = normalizeUrl(image);
+
     // 1. Manual override takes priority (for shared-URL disambiguation)
-    if (manualImageOwners[image]) {
-      const owner = bySlug[manualImageOwners[image]];
+    if (normalizedManualOwners[normKey]) {
+      const owner = bySlug[normalizedManualOwners[normKey]];
       if (owner) {
         return {
           image,
@@ -77,7 +109,7 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
     }
 
     // 2. Auto-resolve from reverse index
-    const candidates = urlToSlugs[image];
+    const candidates = urlToSlugs[normKey];
     if (candidates && candidates.length === 1) {
       const owner = bySlug[candidates[0]];
       if (owner) {
@@ -90,8 +122,6 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
       }
     }
     if (candidates && candidates.length > 1) {
-      // Multiple owners — pick first match (or add to manualImageOwners
-      // to disambiguate)
       const owner = bySlug[candidates[0]];
       if (owner) {
         return {
