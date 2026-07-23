@@ -182,6 +182,16 @@
 
 ---
 
+### 管理页 filter strip 链接指向编辑页而非预览页
+
+34. **管理页 filter strip 链接指向 `/editor/filter/[slug]/` 而非 `/filter/[slug]/`**：用户报告在 `/editor/coupling/` 点顶部 filter strip 的词组会进入预览页 `/filter/[slug]/`，而不是对应 filter 的管理编辑页 `/editor/filter/[slug]/`。修复：
+    - **`src/components/CouplingFilterStrip.astro`**：新增可选 `manage` prop（默认 `false`）。`manage={true}` 时，每个 filter 词条链接前缀为 `/editor/filter/`，否则保持原 `/filter/` 预览前缀。
+    - **`src/pages/editor/coupling.astro`** 与 **`src/pages/editor/filter/[term].astro`**：`<CouplingFilterStrip manage />`，确保两个管理页的顶部 strip 都导向管理编辑页。
+    - 公共预览页 `/coupling/`、`/filter/[slug]/` 不传 `manage`，链接保持 `/filter/[slug]/` 不变。
+    - **验证**：构建后 `dist/editor/coupling/index.html` 与 `dist/editor/filter/infra/index.html` 中 strip 链接均为 `/editor/filter/{slug}/`；`dist/coupling/index.html` 仍为 `/filter/{slug}/`。`pnpm build` 34 页通过、`check-pre-whitespace` 通过。红线：未改动高危文件。
+
+---
+
 ## 5. Overlay 菜单排序规则（第 2、6、8 条的具体落地）
 
 - **左 PROJECTS**：按 `list_title` 字符串升序（`localeCompare`），所以 `000 New Project` 在顶，随后 `001 Ruin` … `090_New Project`。
@@ -224,14 +234,14 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交（main HEAD）：`e278adf`（fix(editor): move filter-term edit controls into right-side edit bar）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS；③ 主页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，管理套件返回链串接；④ 耦合管理页底部对齐首页（可编辑 INFO，工具栏默认隐藏）；⑤ round-2：耦合管理页底部左侧彻底清空，filter 编辑入口移入右侧「编辑」栏（`新建 Filter` 多选建 Filter，底部工具栏强制隐藏）；⑥ 修复新建 Filter 时 `保存失败： unauthorized`（密码 `trim()` + 401 重输）；⑦ round-3：filter 词条页（`/editor/filter/[slug]/`）同样把左下角绿色返回链接与「编辑此 Filter / + 添加图片 / 保存更改 / 退出」工具栏收口到右侧「编辑」栏（`+ 添加图片` / `保存更改 (N 删除)`），底部仅留可编辑 INFO。均已 push 至 `origin/main`，Cloudflare 自动部署中。（注：本会话 push 前 `origin/main` 已含作者若干实时编辑——新增/调整 filters、更新 `info.md`、修复 filter 页 overlay 与 masonry 布局、中文字符文件名 URL 解码归一化——已在 rebase 后并入本次提交之下。）历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
+- 最新提交（main HEAD）：`59c3fa4`（fix(editor): management filter strip links point to /editor/filter/）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS；③ 主页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，管理套件返回链串接；④ 耦合管理页底部对齐首页（可编辑 INFO，工具栏默认隐藏）；⑤ round-2：耦合管理页底部左侧彻底清空，filter 编辑入口移入右侧「编辑」栏（`新建 Filter` 多选建 Filter，底部工具栏强制隐藏）；⑥ 修复新建 Filter 时 `保存失败： unauthorized`（密码 `trim()` + 401 重输）；⑦ round-3：filter 词条页（`/editor/filter/[slug]/`）同样把左下角绿色返回链接与「编辑此 Filter / + 添加图片 / 保存更改 / 退出」工具栏收口到右侧「编辑」栏（`+ 添加图片` / `保存更改 (N 删除)`），底部仅留可编辑 INFO；⑧ 修复管理页顶部 filter strip 链接——点击 `/editor/coupling/` 或 `/editor/filter/[slug]/` 上的 filter 词组现在进入 `/editor/filter/[slug]/` 管理编辑页，不再进入 `/filter/[slug]/` 预览页。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
 - 内容文件：新增 `src/content/info/info.md` 作为 info 页面 / overlay 的唯一数据源；当前**没有** `new-*.md` 测试项目。现有项目集未变。
 - **Info 编辑字段**：`address`、`bio`、`exhibitions_label`、`exhibitions_note_html`、`lectures_label`、`lectures_caption`、`footer_caption`、`page_image`。
 - **Info 预览差异（已修复，见条目 20）**：原问题「编辑改了、预览看不到」已补上 R2 即时通道，公共 `/info` 页保存后秒级更新。前导空格问题经两次定位（见条目 21、22）：条目 21 修了 `info.astro` 公共页模板（`white-space: pre-wrap` div 里表达式前后空白被 Astro 保留）；但空格仍复发，条目 22 实测定位到**真正的复发源是 `BaseLayout.astro` 的 Info 浮层**（同样的 multi-line 表达式空白 bug，公共页早就干净、用户看到的空格来自这个浮层），已与 `info.astro` 一并改为行内表达式 + `cleanLines()` 逐行 trim，`edit-mode.ts` / `live-patch.ts` 也按行 trim，三处渲染出口纵深防御；本次改动触及高危文件 `BaseLayout.astro` 但仅限 info 浮层文字渲染。
-- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。**两个管理页底部均已对齐首页并收口 filter 编辑到右栏（本会话 Issue 3，round-1/2/3）**：`/editor/coupling/` 与 `/editor/filter/[slug]/` 底部左侧都已彻底清空（无绿色链接、无「← EDITOR」/「← COUPLING」），仅留可编辑 `INFO`（均加载 `edit-mode.ts`，与首页同机制）。filter 编辑入口统一移入右侧悬浮「编辑」按钮——点「编辑」进入 filter 编辑态（`body.filter-edit-mode`），栏内切换为「退出(不保存) / …」：耦合页显示「新建 Filter (N)」（多选 tile 后命名即建），词条页显示「+ 添加图片」「保存更改 (N 删除)」（点 tile 标记删除、badge 实时计数、确认后变暗）；底部独立的「编辑 Filters」/「编辑此 Filter」工具栏在两个管理页均强制隐藏（`filter-manage:not(.filter-term)` 与 `filter-term` 已分别覆盖）。关键词保存均对密码 `trim()` 去空格、401 时清除缓存重弹窗（条目 32）。详见 §4 条目 27、28、30、31、32、33。
+- **Coupling / Filter 状态**：coupling 瀑布流已改为全项目图片动态生成（`getAllCouplingItems()` 遍历 `projects` + `lehrgerueste` 的 `cover_image` + 全部 `gallery`，slug/side 遍历时即得，不再靠 R2 URL 反查）；`live-patch.ts` 扩展使编辑器封面替换即时同步到 coupling 封面 tile（gallery 增删走整站重建自动反映）。**预览与管理已拆分为独立 URL（本会话修复）**：预览 `/coupling/`、`/filter/[slug]/` 纯只读、不加载编辑脚本；管理页 `/editor/coupling/`（建/删 Filter）与 `/editor/filter/[slug]/`（增删图）独立存在、密码门控。`filter-edit.js` 已重写为合法纯 JS 并修好交互绑定与 `save-filters` 载荷。**两个管理页底部均已对齐首页并收口 filter 编辑到右栏（本会话 Issue 3，round-1/2/3）**：`/editor/coupling/` 与 `/editor/filter/[slug]/` 底部左侧都已彻底清空（无绿色链接、无「← EDITOR」/「← COUPLING」），仅留可编辑 `INFO`（均加载 `edit-mode.ts`，与首页同机制）。filter 编辑入口统一移入右侧悬浮「编辑」按钮——点「编辑」进入 filter 编辑态（`body.filter-edit-mode`），栏内切换为「退出(不保存) / …」：耦合页显示「新建 Filter (N)」（多选 tile 后命名即建），词条页显示「+ 添加图片」「保存更改 (N 删除)」（点 tile 标记删除、badge 实时计数、确认后变暗）；底部独立的「编辑 Filters」/「编辑此 Filter」工具栏在两个管理页均强制隐藏（`filter-manage:not(.filter-term)` 与 `filter-term` 已分别覆盖）。关键词保存均对密码 `trim()` 去空格、401 时清除缓存重弹窗（条目 32）。两个管理页顶部的 filter strip 链接统一指向 `/editor/filter/[slug]/`，仅公共预览页保留 `/filter/[slug]/`（条目 34）。详见 §4 条目 27、28、30、31、32、33、34。
 - **tdrive 同步状态**：按用户要求**每次会话重新上传**本文件覆盖共享盘 `HANDOFF.md`（file_id `fCqidVvbsRqN`，dir `fhHShMYZJJKF`）。最新版随 `fb1f98c` 已 push；但本环境仍无 tdrive 工具 / COS 上传凭证持续 `InvalidAccessKeyId`，**共享盘尚未覆盖**。GitHub 仓库为规范源，建议用户手动在 tdrive 网页用本地 `HANDOFF.md` 覆盖，或等工具/凭证恢复后由 agent 补传。
 
 ---

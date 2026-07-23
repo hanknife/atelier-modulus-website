@@ -1,11 +1,18 @@
 ---
 import { couplingFilters } from "../data/couplingFilters";
+
+interface Props {
+  manage?: boolean;
+}
+
+const { manage = false } = Astro.props;
+const hrefPrefix = manage ? "/editor/filter/" : "/filter/";
 ---
 
 <aside class="filter-strip" id="filter" aria-label="Active filters">
   {couplingFilters.map((filter, index) => (
     <span class="filter-strip-item" data-filter-slug={filter.slug}>
-      <a href={`/filter/${filter.slug}/`}>{filter.label}</a>
+      <a href={`${hrefPrefix}${filter.slug}/`}>{filter.label}</a>
       <span class="filter-comma">{index < couplingFilters.length - 1 ? ", " : ""}</span>
       <span class="filter-del-btn" title="删除此 Filter" style="display:none;">×</span>
     </span>
