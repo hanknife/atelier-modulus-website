@@ -126,7 +126,12 @@
     - **根因 4（数据传空）**：Astro **不会**求值 `<script type="application/json">{JSON.stringify(x)}</script>` 内的表达式——原 `filter-data` / `board-images` / `current-filter-slug` 输出的是字面量模板，编辑器读到的永远是 `[]` / `null`。管理页改用 `set:html` 注入求值后的 JSON；`getCurrentFilterSlug()` 改为从 URL 派生，不再依赖脚本。
     - **URL 分离（问题 2）**：预览 `/coupling/`、`/filter/[slug]/` 不再加载 `filter-edit.js`（保持纯净只读）；新增独立管理页 `/editor/coupling/`（多选建 Filter、删 Filter）与 `/editor/filter/[slug]/`（增删图）。二者带 `filter-manage` body 标记、加载 `filter-edit.js` 并在加载时自动进入编辑态（密码门控）；管理页 strip 链接指向 `/editor/filter/[slug]/`。`coupling.astro` 的 FILTER 页脚改为链接 `/editor/coupling/`。
     - 红线：仅改 `coupling.astro` / `filter/[term].astro`（高危，本会话改动已在该清单内确认）、新增 `editor/coupling.astro` 与 `editor/filter/[term].astro`、`global.css` / `ProjectCard.astro` 未动（耦合墙逻辑 `/CouplingBoard.astro` 原样复用）。
-    - 验证：`pnpm build` 24 页通过；Playwright 实测预览不加载脚本、管理页自动进入编辑态、tile 可选中、strip 指向管理 URL、零控制台错误；无横向滚动/重叠/裁切回归。`
+    - 验证：`pnpm build` 24 页通过；Playwright 实测预览不加载脚本、管理页自动进入编辑态、tile 可选中、strip 指向管理 URL、零控制台错误；无横向滚动/重叠/裁切回归。
+
+29. **管理套件导航串联（本会话 follow-up）**：用户报告在 `/editor`（主页管理页）左下角点 `COUPLING` 进入的是 `/coupling/` 预览而非 coupling 管理页。修复：
+    - `editor.astro` 的 footer `COUPLING` 链接由 `/coupling/`（预览）改指 `/editor/coupling/`（coupling 管理）。
+    - 把管理套件返回链接串成层级：`/editor/coupling/` 页脚 `← EDITOR` → `/editor/`；`/editor/filter/[slug]/` 页脚 `← COUPLING` → `/editor/coupling/`。管理页之间可互达，不再卡在预览。
+    - 红线：`editor.astro` 与新建的 `editor/coupling.astro`、`editor/filter/[term].astro` 均非高危文件（未改 BaseLayout/index/global.css）；仅改 footer `href`（不动导航栏文字、不动动画/Close）。
 
 ---
 
@@ -172,7 +177,7 @@
 
 ## 7. 当前状态（截至最新提交）
 
-- 最新提交（main HEAD）：`1eef359`（feat(coupling): split preview/management URLs + fix dead filter editor）。本会话修复 coupling/filter 预览与管理 URL 混用问题，并重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）。已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
+- 最新提交（main HEAD）：`b3b6f3a`（fix(nav): link /editor COUPLING to coupling management; chain management back-links）。本会话修复：① coupling/filter 预览与管理 URL 分离；② 重写 `filter-edit.js` 为合法纯 JS（原文件是带 TS 语法的死脚本，点击 FILTER 无反应）；③ 主页管理页 `/editor` 的 COUPLING 链接改指 `/editor/coupling/`，并把管理套件返回链接串成层级。均已 push 至 `origin/main`，Cloudflare 自动部署中。历史：info 相关 `b077e5f` + `61efd19` 已部署；`65513e8` 为初版 filter 编辑器（其 `filter-edit.js` 当时即已损坏，本会话修复）。
 - **防回潮自动体检（见条目 23 / 坑 12，已泛化）**：新增 `scripts/check-pre-whitespace.mjs`，已串进 `build`（`astro build && node scripts/check-pre-whitespace.mjs`）并支持单独 `pnpm verify:pre`。它**不绑定具体类名**，而是按 CSS 属性扫描整个 `dist/`：`任何 white-space: pre / pre-wrap 元素内容以空格开头即报错阻断部署`。已用回归测试验证：注入 Info 空格、伪造全新 pre-wrap 字段都能拦住（exit 1），普通流元素不误伤，干净 exit 0。今后改任何 pre 类文字显示，构建失败即说明漏改，需全局 grep `pre-wrap` / `info-*` / `data-edit` 渲染点补齐。全站审计结论：当前仅有 Info 这一对「双胞胎」使用 `pre-wrap`，已修复并守住；其余 `>` 后换行的 `{表达式}` 均在普通排版中（浏览器折叠行首空白），不会复现同类可见空格。
 - `localStorage` key：**`am_editor_overrides_v4`**
 - `BaseLayout.astro`：projects 菜单已按 `list_title` `localeCompare` 升序；lehrgerueste 仍按 `order` 升序；**info overlay 已改为从 `src/content/info/info.md` 读取并加 `data-edit` 编辑钩子**；**本次（commit `61efd19`）进一步把 info 浮层 7 个字段从多行表达式改为行内表达式并加 `cleanLines()` 逐行 trim，彻底消除浮层里的行首空格**（⚠️ 改动触及高危文件 `BaseLayout.astro`，但仅限 info 浮层文字渲染，未动动画/Close/导航/菜单排序）。
