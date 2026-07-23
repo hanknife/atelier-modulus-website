@@ -3,10 +3,12 @@ import type { CouplingImageMeta } from "../lib/coupling";
 
 interface Props {
   items: CouplingImageMeta[];
+  /** CSS class for the board container. Default "coupling-board" (grid collage).
+   *  Pass "filter-board" for /filter/[term] pages (flex masonry). */
+  boardClass?: string;
 }
 
-const { items } = Astro.props;
-const boardClass = "coupling-board";
+const { items, boardClass: bc = "coupling-board" } = Astro.props;
 
 // Every source image shares a ~1.3 aspect ratio, so a by-ratio size mapping
 // would make each tile the same width. Instead each tile gets an explicit
@@ -16,7 +18,7 @@ const boardClass = "coupling-board";
 const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
 ---
 
-<section class={boardClass} aria-label="Coupling image board">
+<section class={bc} aria-label="Coupling image board">
   {items.map(({ image, slug, side, isCover }, index) => {
     const size = SIZE_PATTERN[index % SIZE_PATTERN.length];
     return (
@@ -38,6 +40,7 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
     var boards = document.querySelectorAll(".coupling-board, .filter-board");
     boards.forEach(function (board) {
       var tiles = Array.from(board.querySelectorAll(".coupling-tile"));
+      // Fisher-Yates shuffle for visual variety
       for (var i = tiles.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
         var tmp = tiles[i];
@@ -50,14 +53,15 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
         board.appendChild(tile);
       });
     });
-    layoutMasonry();
-    window.addEventListener("load", layoutMasonry);
-    window.addEventListener("resize", layoutMasonry);
+    layoutGridMasonry();
+    window.addEventListener("load", layoutGridMasonry);
+    window.addEventListener("resize", layoutGridMasonry);
   });
 
-  // Size each coupling-board tile's grid row span from its rendered height so
-  // the image keeps its original aspect ratio with no crop and no overlap.
-  function layoutMasonry() {
+  // Size each coupling-board (GRID) tile's row span from its rendered height.
+  // Only applies to .coupling-board (the /coupling/ grid collage).
+  // NOT needed for .filter-board (uses flex column-wrap masonry via CSS).
+  function layoutGridMasonry() {
     var board = document.querySelector(".coupling-board");
     if (!board) return;
     var tiles = board.querySelectorAll(".coupling-tile");
@@ -67,7 +71,7 @@ const SIZE_PATTERN = [4, 3, 2, 3, 4, 2, 4, 3, 2, 3, 2, 4, 3, 2, 3, 2];
       tile.style.gridRowEnd = "auto";
       var h = img.getBoundingClientRect().height;
       if (!h) {
-        img.addEventListener("load", layoutMasonry, { once: true });
+        img.addEventListener("load", layoutGridMasonry, { once: true });
         return;
       }
       var span = Math.ceil(h) + 20;

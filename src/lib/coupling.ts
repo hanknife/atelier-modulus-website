@@ -34,8 +34,11 @@ const manualImageOwners: Record<string, string> = {
 
 /**
  * Resolve a flat list of image URLs (the curated /filter pages) to coupling
- * items. Each URL is mapped back to its owning project (slug + side) via the
- * manual owner map so a tile can open the correct detail overlay.
+ * items. Each URL is mapped back to its owning project (slug + side) by
+ * scanning every project's cover_image + gallery arrays at build time.
+ *
+ * Falls back to manualImageOwners only for URLs that exist in multiple
+ * projects and need a forced owner, or orphan URLs with no project match.
  */
 export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[]> {
   const projects = (await getCollection("projects")).sort(
@@ -45,13 +48,63 @@ export async function getImageMeta(images: string[]): Promise<CouplingImageMeta[
     projects.map((p) => [p.id.replace(/\.mdx?$/, ""), p])
   );
 
+  // Build a reverse index: R2 URL → array of slugs that contain it.
+  // Most images belong to exactly one project; a few may be shared.
+  const urlToSlugs: Record<string, string[]> = {};
+  for (const p of projects) {
+    const slug = p.id.replace(/\.mdx?$/, "");
+    const allImages = [p.data.cover_image, ...(p.data.gallery ?? [])];
+    for (const img of allImages) {
+      if (typeof img === "string" && img.length > 0) {
+        if (!urlToSlugs[img]) urlToSlugs[img] = [];
+        if (!urlToSlugs[img].includes(slug)) urlToSlugs[img].push(slug);
+      }
+    }
+  }
+
   return images.map((image) => {
-    const ownerSlug = manualImageOwners[image];
-    const owner = ownerSlug ? bySlug[ownerSlug] : undefined;
-    const slug = owner ? owner.id.replace(/\.mdx?$/, "") : "";
-    const side: "left" | "right" =
-      owner && owner.data.category === "lehrgerueste" ? "right" : "left";
-    return { image, slug, side, isCover: true };
+    // 1. Manual override takes priority (for shared-URL disambiguation)
+    if (manualImageOwners[image]) {
+      const owner = bySlug[manualImageOwners[image]];
+      if (owner) {
+        return {
+          image,
+          slug: owner.id.replace(/\.mdx?$/, ""),
+          side: owner.data.category === "lehrgerueste" ? "right" : "left",
+          isCover: true,
+        };
+      }
+    }
+
+    // 2. Auto-resolve from reverse index
+    const candidates = urlToSlugs[image];
+    if (candidates && candidates.length === 1) {
+      const owner = bySlug[candidates[0]];
+      if (owner) {
+        return {
+          image,
+          slug: owner.id.replace(/\.mdx?$/, ""),
+          side: owner.data.category === "lehrgerueste" ? "right" : "left",
+          isCover: true,
+        };
+      }
+    }
+    if (candidates && candidates.length > 1) {
+      // Multiple owners — pick first match (or add to manualImageOwners
+      // to disambiguate)
+      const owner = bySlug[candidates[0]];
+      if (owner) {
+        return {
+          image,
+          slug: owner.id.replace(/\.mdx?$/, ""),
+          side: owner.data.category === "lehrgerueste" ? "right" : "left",
+          isCover: true,
+        };
+      }
+    }
+
+    // 3. Orphan URL — no overlay available
+    return { image, slug: "", side: "left", isCover: true };
   });
 }
 
