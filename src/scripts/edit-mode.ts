@@ -147,6 +147,21 @@ function markDirty(card: HTMLElement) {
   card.dataset.dirty = "1";
 }
 
+/** Detail overlays are .project-card but excluded from save().
+ *  When a gallery / cover change happens inside an overlay, copy the updated
+ *  frontmatter to the corresponding column card (which save() does persist)
+ *  and mark that column card dirty so the change is actually saved. */
+function persistCardChange(sourceCard: HTMLElement) {
+  const slug = sourceCard.dataset.slug;
+  if (!slug) return;
+  const persisted = document.querySelector<HTMLElement>(`.project-column .project-card[data-slug="${slug}"]`);
+  if (!persisted || persisted === sourceCard) return;
+  if (sourceCard.dataset.frontmatter) {
+    persisted.dataset.frontmatter = sourceCard.dataset.frontmatter;
+  }
+  markDirty(persisted);
+}
+
 function applyOverrides() {
   const state = loadOverrides();
   document.querySelectorAll<HTMLElement>(".project-card, .info-overlay").forEach((card) => {
@@ -578,6 +593,7 @@ function initGalleryDragDrop(gallery: HTMLElement, card: HTMLElement) {
     gallery.querySelectorAll<HTMLElement>(".gallery-img-wrap").forEach((el) => el.classList.remove("drag-over"));
     syncGalleryFromDOM(card);
     markDirty(card);
+    persistCardChange(card);
     persistOverrides();
   });
 
@@ -731,6 +747,7 @@ async function handleReplace(card: HTMLElement, file: File) {
     const url = await uploadImage(file);
     URL.revokeObjectURL(previewUrl);
     swap(url);
+    persistCardChange(card);
     persistOverrides();
   } catch (e) {
     URL.revokeObjectURL(previewUrl);
@@ -775,6 +792,7 @@ async function handleGalleryAdd(card: HTMLElement, files: File[]) {
   }
 
   markDirty(card);
+  persistCardChange(card);
   persistOverrides();
 }
 
@@ -1018,6 +1036,7 @@ document.addEventListener("click", async (e) => {
       if (card) {
         syncGalleryFromDOM(card);
         markDirty(card);
+        persistCardChange(card);
         // Track this URL for R2 cleanup on save.
         if (deletedUrl && !deletedUrl.startsWith("blob:")) {
           const deleted = JSON.parse(card.dataset.deletedImages || "[]") as string[];

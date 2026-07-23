@@ -135,6 +135,9 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         deduped.set(item.path, item);
       }
       const uniqueItems = Array.from(deduped.values());
+      if (uniqueItems.length === 0) {
+        return json({ ok: true, results: [] });
+      }
       const results: Array<{ path: string; ok?: boolean; error?: string }> = [];
 
       // A whole-save retry handles two transient GitHub issues:
