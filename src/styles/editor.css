@@ -68,6 +68,25 @@ body.edit-mode [data-edit]:focus {
   color: #fff;
 }
 
+/* Bottom-left control strip for detail overlays (add / delete gallery images).
+   Hidden by default; shown only when a detail overlay is open AND edit mode
+   is active. Fixed to viewport bottom-left to match the existing filter-edit
+   toolbar pattern. */
+.overlay-edit-strip {
+  display: none;
+}
+html.detail-overlay-open body.edit-mode .overlay-edit-strip {
+  position: fixed;
+  left: var(--pad-x, 8px);
+  bottom: var(--pad-x, 8px);
+  z-index: 9001;
+  margin-top: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--paper, #fff);
+}
+
 /* --- Gallery in edit mode: wrappers + drag-drop + X delete button --- */
 body.edit-mode .detail-gallery {
   display: flex !important;

@@ -1007,6 +1007,29 @@ function buildUI() {
     }
   });
 
+/** Remove a gallery image wrapper, sync frontmatter, mark dirty, and track the
+ *  deleted URL for R2 cleanup on save. Shared by the per-image ✕ button and the
+ *  bottom-left "删除图纸" strip button. */
+function removeGalleryWrap(wrap: Element) {
+  const img = wrap.querySelector<HTMLImageElement>("img");
+  const deletedUrl = img?.src ?? "";
+  // Resolve the owning card BEFORE detaching the wrap, otherwise closest()
+  // can no longer find it (the wrap itself is not a .project-card).
+  const card = wrap.closest<HTMLElement>(".project-card");
+  wrap.remove();
+  if (!card) return;
+  syncGalleryFromDOM(card);
+  markDirty(card);
+  persistCardChange(card);
+  // Track this URL for R2 cleanup on save.
+  if (deletedUrl && !deletedUrl.startsWith("blob:")) {
+    const deleted = JSON.parse(card.dataset.deletedImages || "[]") as string[];
+    deleted.push(deletedUrl);
+    card.dataset.deletedImages = JSON.stringify(deleted);
+  }
+  persistOverrides();
+}
+
 document.addEventListener("click", async (e) => {
     const t = e.target as HTMLElement;
     if (t.matches('button[data-role="delete-card"]')) {
@@ -1033,26 +1056,22 @@ document.addEventListener("click", async (e) => {
       return; // don't fall through to del-btn handler
     }
 
+    // Click the bottom-left "删除图纸" button — delete the currently selected
+    // gallery image (the one showing its ✕).
+    if (t.matches('[data-role="delete-gallery"]')) {
+      const card = t.closest<HTMLElement>(".project-card");
+      if (!card) return;
+      const wrap = card.querySelector<HTMLElement>(".detail-gallery .gallery-img-wrap.selected");
+      if (!wrap || wrap.classList.contains("is-cover")) return;
+      removeGalleryWrap(wrap);
+      return;
+    }
+
     // Click the ✕ delete button on a gallery image wrapper.
     if (t.matches(".gallery-del-btn")) {
       const wrap = t.parentElement; // .gallery-img-wrap
       if (!wrap) return;
-      const img = wrap.querySelector<HTMLImageElement>("img");
-      const deletedUrl = img?.src ?? "";
-      wrap.remove();
-      const card = wrap.closest<HTMLElement>(".project-card");
-      if (card) {
-        syncGalleryFromDOM(card);
-        markDirty(card);
-        persistCardChange(card);
-        // Track this URL for R2 cleanup on save.
-        if (deletedUrl && !deletedUrl.startsWith("blob:")) {
-          const deleted = JSON.parse(card.dataset.deletedImages || "[]") as string[];
-          deleted.push(deletedUrl);
-          card.dataset.deletedImages = JSON.stringify(deleted);
-        }
-        persistOverrides();
-      }
+      removeGalleryWrap(wrap);
     }
   });
 

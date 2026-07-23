@@ -47,11 +47,12 @@ const projects = (await getCollection("projects"))
         <div class="detail-gallery" aria-label={`${data.title} gallery`}>
           {detailImages.map((image) => <img src={image} alt="" loading="lazy" />)}
         </div>
-        <div class="edit-controls" hidden>
+        <div class="edit-controls overlay-edit-strip" hidden>
           <label class="edit-add-gallery">
             添加图纸
             <input type="file" accept="image/*" data-role="add-gallery" multiple hidden />
           </label>
+          <button type="button" data-role="delete-gallery">删除图纸</button>
         </div>
       </aside>
     );
