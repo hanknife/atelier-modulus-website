@@ -27,8 +27,8 @@ const allBoardImages = (await getAllCouplingItems()).map((item) => item.image);
 <BaseLayout
   title={`${filter.label} / Atelier Modulus — Editor`}
   bodyClass="coupling-state filter-open filter-term filter-manage"
-  footerLeftLabel="← PREVIEW"
-  footerLeftHref={`/filter/${filter.slug}/`}
+  footerLeftLabel="← COUPLING"
+  footerLeftHref="/editor/coupling/"
   showInfo={false}
 >
   <script type="application/json" id="filter-data" set:html={JSON.stringify(couplingFilters)}></script>

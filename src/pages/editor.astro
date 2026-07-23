@@ -22,7 +22,10 @@ const rightProjects = projects
   .sort((a, b) => a.data.order - b.data.order);
 ---
 
-<BaseLayout title="Atelier Modulus — Editor">
+<BaseLayout
+  title="Atelier Modulus — Editor"
+  footerLeftHref="/editor/coupling/"
+>
   <section class="project-split home-index" aria-label="Project index (editable)">
     <div class="project-column" aria-label="Left project column">
       {leftProjects.map((project) => <EditorCard project={project} side="left" />)}
