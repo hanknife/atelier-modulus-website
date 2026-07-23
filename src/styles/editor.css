@@ -76,10 +76,10 @@ body.edit-mode [data-edit]:focus {
   display: none;
 }
 html.detail-overlay-open body.edit-mode .overlay-edit-strip {
-  position: fixed;
+  position: sticky;
   left: var(--pad-x, 8px);
   bottom: var(--pad-x, 8px);
-  z-index: 9001;
+  z-index: 100;
   margin-top: 0;
   display: flex;
   gap: 8px;
