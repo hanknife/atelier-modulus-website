@@ -6,29 +6,48 @@
 
 const LIVE_ENDPOINT = "/api/live";
 
-// Deletion tombstones written by the in-page filter editor (filter-edit.js)
-// into localStorage. When a filter is deleted locally, the editor stores a
-// { slug, label, images: "__DELETED__" } entry here so the deletion survives a
-// refresh even before the server (live/filters.json + Cloudflare rebuild) has
-// caught up. We must respect those tombstones here too — otherwise this live
-// patch re-adds the deleted filter from a still-stale live/filters.json,
-// undoing the deletion the moment the page reloads.
+// Local filter edits written by the in-page filter editor (filter-edit.js)
+// into localStorage. When a filter is created/edited/deleted locally, the
+// editor stores entries here so the change survives a refresh even before the
+// server (live/filters.json + Cloudflare rebuild) has caught up. We must
+// respect those entries here too — otherwise this live patch re-adds a deleted
+// filter from a still-stale live/filters.json, or misses a newly-created filter
+// if live/filters.json was not written yet (e.g. missing R2 binding/propagation
+// lag).
 const FILTER_LS_KEY = "am_filter_edit_v1";
 
-function getDeletedFilterSlugs(): Set<string> {
+function getLocalFilterEntries(): Array<{ slug: string; label: string; images: string[] | string }> {
   try {
     const raw = localStorage.getItem(FILTER_LS_KEY);
-    if (!raw) return new Set();
+    if (!raw) return [];
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return new Set();
-    return new Set(
-      arr
-        .filter((f: any) => f && f.images === "__DELETED__")
-        .map((f: any) => f.slug as string)
-    );
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((f: any) => f && typeof f.slug === "string");
   } catch {
-    return new Set();
+    return [];
   }
+}
+
+function getDeletedFilterSlugs(localEntries = getLocalFilterEntries()): Set<string> {
+  return new Set(
+    localEntries.filter((f) => f.images === "__DELETED__").map((f) => f.slug)
+  );
+}
+
+// Merge server filters (live/filters.json via /api/live) with local additions.
+// Server data wins for slugs that exist on both sides; local-only slugs are
+// appended. Deleted slugs (tombstones) are excluded from both sides.
+function mergeFilterLists(serverFilters: Array<{ slug: string; label: string }>): Array<{ slug: string; label: string }> {
+  const localEntries = getLocalFilterEntries();
+  const deletedSlugs = getDeletedFilterSlugs(localEntries);
+  const serverMap = new Map(serverFilters.filter((f) => !deletedSlugs.has(f.slug)).map((f) => [f.slug, f]));
+  for (const lf of localEntries) {
+    if (deletedSlugs.has(lf.slug)) continue;
+    if (!serverMap.has(lf.slug)) {
+      serverMap.set(lf.slug, { slug: lf.slug, label: lf.label });
+    }
+  }
+  return Array.from(serverMap.values());
 }
 
 async function patchLive() {
@@ -89,33 +108,31 @@ async function patchLive() {
     // instantly in the filter strip (before Cloudflare rebuild finishes).
     const isCoupling = !!document.querySelector(".coupling-state:not(.filter-term)");
     const isFilterTerm = !!document.querySelector(".filter-term");
-    if ((isCoupling || isFilterTerm) && map.filters && Array.isArray(map.filters)) {
+    const localEntries = getLocalFilterEntries();
+    const hasLocalFilters = localEntries.some((f) => f.images !== "__DELETED__");
+    if ((isCoupling || isFilterTerm) && (Array.isArray(map.filters) || hasLocalFilters)) {
       const strip = document.querySelector<HTMLElement>(".filter-strip");
       if (strip) {
-        // Respect local deletion tombstones: a slug the editor marked deleted
-        // must never be re-injected here, even if live/filters.json is stale.
-        const deletedSlugs = getDeletedFilterSlugs();
+        // Merge server filters with local additions and respect deletion tombstones.
+        // This ensures newly-created filters show up on the preview page even when
+        // live/filters.json is stale or hasn't been written yet (e.g. R2 propagation
+        // lag / missing bucket binding), and deleted filters stay hidden.
+        const visibleFilters = mergeFilterLists((map.filters as Array<{ slug: string; label: string }>) || []);
         // Remove any previously added dynamic items
         strip.querySelectorAll<HTMLElement>(".filter-strip-item").forEach(el => el.remove());
-        const visibleFilters = (map.filters as Array<{ slug: string; label: string }>).filter(
-          (f) => !deletedSlugs.has(f.slug)
-        );
         visibleFilters.forEach((f, index) => {
-          // Only add if not already server-rendered (avoid duplicates)
-          if (!strip.querySelector(`[data-filter-slug="${f.slug}"]`)) {
-            const wrapper = document.createElement("span");
-            wrapper.className = "filter-strip-item";
-            wrapper.dataset.filterSlug = f.slug;
-            const link = document.createElement("a");
-            link.href = `/filter/${f.slug}/`;
-            link.textContent = f.label;
-            const sep = document.createElement("span");
-            sep.className = "filter-comma";
-            sep.textContent = index === visibleFilters.length - 1 ? ". " : ", ";
-            wrapper.appendChild(link);
-            wrapper.appendChild(sep);
-            strip.appendChild(wrapper);
-          }
+          const wrapper = document.createElement("span");
+          wrapper.className = "filter-strip-item";
+          wrapper.dataset.filterSlug = f.slug;
+          const link = document.createElement("a");
+          link.href = `/filter/${f.slug}/`;
+          link.textContent = f.label;
+          const sep = document.createElement("span");
+          sep.className = "filter-comma";
+          sep.textContent = index === visibleFilters.length - 1 ? ". " : ", ";
+          wrapper.appendChild(link);
+          wrapper.appendChild(sep);
+          strip.appendChild(wrapper);
         });
       }
     }
