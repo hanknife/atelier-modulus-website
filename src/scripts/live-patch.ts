@@ -55,7 +55,16 @@ async function patchLive() {
     const res = await fetch(LIVE_ENDPOINT, { cache: "no-store" });
     if (!res.ok) return;
     const map = (await res.json()) as Record<string, any>;
-    if (!map || Object.keys(map).length === 0) return;
+    if (!map) return;
+    // Local filter edits (additions/edits/deletions) must be applied even when
+    // the live map is otherwise empty — e.g. the R2 binding is missing so
+    // /api/live returns {}. Compute this up front so we do NOT bail out early in
+    // that case; otherwise a deletion tombstone would never hide the filter on
+    // the preview page when live data is unavailable.
+    const localEntries = getLocalFilterEntries();
+    const deletedSlugs = getDeletedFilterSlugs(localEntries);
+    const hasLocalFilterChanges = localEntries.length > 0;
+    if (Object.keys(map).length === 0 && !hasLocalFilterChanges) return;
     document.querySelectorAll<HTMLElement>(".project-card").forEach((card) => {
       // Most cards expose the slug via an inner a.view-link[data-slug]. The
       // project DETAIL page's editable card is an <article.project-detail> that
@@ -108,16 +117,42 @@ async function patchLive() {
     // instantly in the filter strip (before Cloudflare rebuild finishes).
     const isCoupling = !!document.querySelector(".coupling-state:not(.filter-term)");
     const isFilterTerm = !!document.querySelector(".filter-term");
-    const localEntries = getLocalFilterEntries();
-    const hasLocalFilters = localEntries.some((f) => f.images !== "__DELETED__");
-    if ((isCoupling || isFilterTerm) && (Array.isArray(map.filters) || hasLocalFilters)) {
+    const hasLocalAdditions = localEntries.some((f) => f.images !== "__DELETED__");
+    const hasLocalDeletions = deletedSlugs.size > 0;
+    const serverFilters = Array.isArray(map.filters)
+      ? (map.filters as Array<{ slug: string; label: string }>)
+      : null;
+
+    // Run whenever the page carries a filter strip AND we have something to
+    // apply: live server filters, local additions (new filters), or local
+    // deletions (tombstones). Crucially we also run for a deletion tombstone
+    // even when map.filters is absent — otherwise a deleted filter would stay
+    // visible on the preview page whenever /api/live returned no filters (e.g.
+    // the R2 binding is missing), which is exactly the "deleted filter
+    // reappears after refresh" failure mode.
+    if ((isCoupling || isFilterTerm) && (serverFilters || hasLocalAdditions || hasLocalDeletions)) {
       const strip = document.querySelector<HTMLElement>(".filter-strip");
       if (strip) {
-        // Merge server filters with local additions and respect deletion tombstones.
+        // Prefer live server filters as the base list (they are fresher than the
+        // static build). When live filters are unavailable/empty, fall back to the
+        // server-rendered static strip already in the DOM so we never wipe it —
+        // we only apply local deletions and additions on top.
+        let baseFilters: Array<{ slug: string; label: string }>;
+        if (serverFilters && serverFilters.length > 0) {
+          baseFilters = serverFilters;
+        } else {
+          baseFilters = Array.from(strip.querySelectorAll<HTMLElement>(".filter-strip-item"))
+            .map((el) => ({
+              slug: el.dataset.filterSlug || "",
+              label: el.querySelector("a")?.textContent || "",
+            }))
+            .filter((f) => f.slug);
+        }
+        // Merge base filters with local additions and respect deletion tombstones.
         // This ensures newly-created filters show up on the preview page even when
         // live/filters.json is stale or hasn't been written yet (e.g. R2 propagation
         // lag / missing bucket binding), and deleted filters stay hidden.
-        const visibleFilters = mergeFilterLists((map.filters as Array<{ slug: string; label: string }>) || []);
+        const visibleFilters = mergeFilterLists(baseFilters);
         // Remove any previously added dynamic items
         strip.querySelectorAll<HTMLElement>(".filter-strip-item").forEach(el => el.remove());
         visibleFilters.forEach((f, index) => {
