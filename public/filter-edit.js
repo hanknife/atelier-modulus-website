@@ -164,9 +164,11 @@ function mergedFilters() {
     localFilters.filter((f) => f.images === "__DELETED__").map((f) => f.slug)
   );
   const result = staticFilters.filter((f) => !deletedSlugs.has(f.slug));
-  // Append or update with local additions/edits.
+  // Append or update with local additions/edits. Crucially, any local entry
+  // (addition OR edit) for a deleted slug must be ignored, otherwise a prior
+  // non-tombstone local record resurrects the filter when entering edit mode.
   for (const lf of localFilters) {
-    if (lf.images === "__DELETED__") continue; // already handled
+    if (deletedSlugs.has(lf.slug)) continue; // deleted locally — ignore entirely
     const idx = result.findIndex((r) => r.slug === lf.slug);
     if (idx >= 0) result[idx] = lf;
     else result.push(lf);
@@ -295,8 +297,9 @@ async function createNewFilter() {
   const images = Array.from(selectedImages);
   const newFilter = { slug: slug, label: name, images: images };
 
-  // Save locally first (instant UI)
-  const local = loadFilters();
+  // Save locally first (instant UI). Also clear any deletion tombstone for the
+  // same slug, so recreating a previously-deleted filter actually works.
+  const local = loadFilters().filter((f) => f.slug !== slug);
   local.push(newFilter);
   persistFilters(local);
 
@@ -318,7 +321,10 @@ async function createNewFilter() {
 
 async function deleteFilter(slug, label) {
   if (!(await showDialog("删除 Filter「" + label + "」？"))) return;
-  const local = loadFilters();
+  // Remove any prior local records for this slug before pushing the tombstone.
+  // This prevents stale non-tombstone entries from accumulating and keeps
+  // mergedFilters() from accidentally resurrecting the filter in edit mode.
+  const local = loadFilters().filter((f) => f.slug !== slug);
   local.push({ slug: slug, label: label, images: "__DELETED__" }); // tombstone
   persistFilters(local);
 
