@@ -6,6 +6,31 @@
 
 const LIVE_ENDPOINT = "/api/live";
 
+// Deletion tombstones written by the in-page filter editor (filter-edit.js)
+// into localStorage. When a filter is deleted locally, the editor stores a
+// { slug, label, images: "__DELETED__" } entry here so the deletion survives a
+// refresh even before the server (live/filters.json + Cloudflare rebuild) has
+// caught up. We must respect those tombstones here too — otherwise this live
+// patch re-adds the deleted filter from a still-stale live/filters.json,
+// undoing the deletion the moment the page reloads.
+const FILTER_LS_KEY = "am_filter_edit_v1";
+
+function getDeletedFilterSlugs(): Set<string> {
+  try {
+    const raw = localStorage.getItem(FILTER_LS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return new Set();
+    return new Set(
+      arr
+        .filter((f: any) => f && f.images === "__DELETED__")
+        .map((f: any) => f.slug as string)
+    );
+  } catch {
+    return new Set();
+  }
+}
+
 async function patchLive() {
   try {
     const res = await fetch(LIVE_ENDPOINT, { cache: "no-store" });
@@ -67,9 +92,13 @@ async function patchLive() {
     if ((isCoupling || isFilterTerm) && map.filters && Array.isArray(map.filters)) {
       const strip = document.querySelector<HTMLElement>(".filter-strip");
       if (strip) {
+        // Respect local deletion tombstones: a slug the editor marked deleted
+        // must never be re-injected here, even if live/filters.json is stale.
+        const deletedSlugs = getDeletedFilterSlugs();
         // Remove any previously added dynamic items
         strip.querySelectorAll<HTMLElement>(".filter-strip-item").forEach(el => el.remove());
         for (const f of map.filters as Array<{ slug: string; label: string }>) {
+          if (deletedSlugs.has(f.slug)) continue; // deleted locally — skip
           // Only add if not already server-rendered (avoid duplicates)
           if (!strip.querySelector(`[data-filter-slug="${f.slug}"]`)) {
             const wrapper = document.createElement("span");
