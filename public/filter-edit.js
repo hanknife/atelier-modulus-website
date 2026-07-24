@@ -328,16 +328,30 @@ async function deleteFilter(slug, label) {
   local.push({ slug: slug, label: label, images: "__DELETED__" }); // tombstone
   persistFilters(local);
 
+  // Remove from strip immediately for responsive feedback and update the last
+  // separator to a period (the new last item now ends with ". ").
+  document.querySelectorAll(".filter-strip-item").forEach((el) => {
+    if (el.dataset.filterSlug === slug) el.remove();
+  });
+  refreshFilterSeparators();
+
   const ok = await saveFiltersToServer(mergedFilters());
   if (ok) {
     await showAlert("已删除");
   } else {
     await showAlert("本地已标记删除，但服务器同步失败。");
   }
+}
 
-  // Remove from strip
-  document.querySelectorAll(".filter-strip-item").forEach((el) => {
-    if (el.dataset.filterSlug === slug) el.remove();
+// Ensure all filter separators are ", " except the last item, which uses ". ".
+function refreshFilterSeparators() {
+  const strip = document.querySelector(".filter-strip");
+  if (!strip) return;
+  const items = strip.querySelectorAll(".filter-strip-item");
+  items.forEach((item, index) => {
+    const sep = item.querySelector(".filter-comma");
+    if (!sep) return;
+    sep.textContent = index === items.length - 1 ? ". " : ", ";
   });
 }
 
@@ -349,9 +363,6 @@ function appendFilterToStrip(filter, hrefFor) {
   if (!strip) return;
   // Check if already present
   if (strip.querySelector('[data-filter-slug="' + filter.slug + '"]')) return;
-  // Find position after the last existing <a> to insert new items
-  const comma = strip.querySelector(".filter-sep-last");
-  if (comma) { comma.remove(); }
 
   const href = hrefFor ? hrefFor(filter.slug) : ("/filter/" + filter.slug + "/");
 
@@ -383,6 +394,7 @@ function appendFilterToStrip(filter, hrefFor) {
   wrapper.appendChild(delBtn);
   wrapper.appendChild(sep);
   strip.appendChild(wrapper);
+  refreshFilterSeparators();
 }
 
 // Rebuild entire strip from merged data (used on init).
@@ -393,6 +405,7 @@ function rebuildStripFromMerged(hrefFor) {
   for (const f of filters) {
     appendFilterToStrip(f, hrefFor);
   }
+  refreshFilterSeparators();
 }
 
 // ---- Filter-page removal state --------------------------------------------
@@ -704,6 +717,7 @@ buildUI();
   document.querySelectorAll(".filter-strip-item").forEach((el) => {
     if (deletedSlugs.has(el.dataset.filterSlug)) el.remove();
   });
+  refreshFilterSeparators();
 })();
 
 // Both management pages now use the unified right-side #edit-bar (from

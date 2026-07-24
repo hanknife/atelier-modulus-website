@@ -14,7 +14,7 @@ const hrefPrefix = manage ? "/editor/filter/" : "/filter/";
     <span class="filter-strip-item" data-filter-slug={filter.slug}>
       <a href={`${hrefPrefix}${filter.slug}/`}>{filter.label}</a>
       <span class="filter-del-btn" title="删除此 Filter" style="display:none;">×</span>
-      <span class="filter-comma">{index < couplingFilters.length - 1 ? ", " : ""}</span>
+      <span class="filter-comma">{index < couplingFilters.length - 1 ? ", " : ". "}</span>
     </span>
   ))}
 </aside>

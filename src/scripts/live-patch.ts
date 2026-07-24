@@ -97,8 +97,10 @@ async function patchLive() {
         const deletedSlugs = getDeletedFilterSlugs();
         // Remove any previously added dynamic items
         strip.querySelectorAll<HTMLElement>(".filter-strip-item").forEach(el => el.remove());
-        for (const f of map.filters as Array<{ slug: string; label: string }>) {
-          if (deletedSlugs.has(f.slug)) continue; // deleted locally — skip
+        const visibleFilters = (map.filters as Array<{ slug: string; label: string }>).filter(
+          (f) => !deletedSlugs.has(f.slug)
+        );
+        visibleFilters.forEach((f, index) => {
           // Only add if not already server-rendered (avoid duplicates)
           if (!strip.querySelector(`[data-filter-slug="${f.slug}"]`)) {
             const wrapper = document.createElement("span");
@@ -109,12 +111,12 @@ async function patchLive() {
             link.textContent = f.label;
             const sep = document.createElement("span");
             sep.className = "filter-comma";
-            sep.textContent = ", ";
+            sep.textContent = index === visibleFilters.length - 1 ? ". " : ", ";
             wrapper.appendChild(link);
             wrapper.appendChild(sep);
             strip.appendChild(wrapper);
           }
-        }
+        });
       }
     }
 
